@@ -76,9 +76,20 @@ We will be utilizing the class's CloudLab project to allocate a testing cluster 
 Using CloudLab we will create a virtual cloud with enough machines to model many different possible microservice mesh layouts (assignments of microservices to physical/virtual machines), and this way be able to produce accurate benchmarks in the process of developing our scaler.
 
 \section{Outcomes}
-% Final evaluation plan and experiments to run
 % Questions to be answered
+% Final evaluation plan and experiments to run
+\subsection{Evaluation}
+questions: how does our method compare with other methods, how does containerization topology affect performance, what is the tradeoff between telemetry frequency overhead and controller responsiveness, what about microbursts, what controller behavior is good
+
+measuring: end-to-end latency (most important), hardware resources (cpu/mem/io)
+
+compare with \cite{kubernetes_hpa} (simple baseline), \cite{choi_phpa}, and maybe \cite{sachi_cola}
+
+experiments: fixed workload with various comparing methods, our method under various workloads, fixed workload with our method with different controllers
+
+\subsection{Impact}
 % Impact if successful 
+more efficient dynamic cloud resource usage for microservices -> lower power consumption, more responsive services for users
 
 \bibliographystyle{abbrv} 
 \begin{small}
