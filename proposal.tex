@@ -55,7 +55,15 @@ Other challenges to this approach include accounting for replicated microservice
 \section{Implementation Plan}
 % What work must be done, and how it will be divided amonst us
 % 75%, 100% and 125% goals
-
+We have decided a logical division of this project's goals into a temporal timeline, as well as a subdivision of certain tasks into parallelizable parts to more effectively utilize our group of three. Here is said timeline:
+\begin{enumerate}
+    \item Initial steps and framework creation
+    \begin{itemize}
+        \item Setup of container services: mostly will involve writing scripts to handle horizontal scaling yaml configs and kubernetes (Esther)
+        \item Sidecar/service mesh setup: general setup/scripting and implementation of request/response rate collection through the sidecar (Leo)
+        \item Global controller setup: implement global knob tuning through the controller (scaling of the \# of service instances and resource limits) (Rahul)
+    \end{itemize}
+\end{enumerate}
 \section{Resources}
 % Resources we'll be using
 \subsection{CloudLab}
