@@ -58,6 +58,14 @@ Other challenges to this approach include accounting for replicated microservice
 
 \section{Resources}
 % Resources we'll be using
+\subsection{CloudLab}
+We will be utilizing the class's CloudLab project to allocate a testing cluster for our project. This resource will become necessary for our project's success for a few reasons:
+\begin{itemize}
+    \item A collaborative testing environment which each of us can $\tt ssh$ into creates a standardized testing environment for each group member to work in, and removes the overhead of setting up and debugging tests on the disparate environments of our personal machines.
+    \item The CloudLab cluster comes with an abundance of compute and memory resources, which will come in handy to be able to simulate a workload of realistic size on our test microservice mesh.
+    \item In order to truly benchmark our auto-scaler solution, we will need more a single-machine simulation of a sample workload on the modified microservice mesh. This is due to the limited ability of a personal machine (with, say, 8 cores) to accurately model the effect of a networked and distributed microservice architecture. We might encounter false positive and false negatives in tuning the global scaling controller if we do so on a single-machine setup instead of the more accurate model of a multi-machine cloud.
+\end{itemize}
+Using CloudLab we will create a virtual cloud with enough machines to model many different possible microservice mesh layouts (assignments of microservices to physical/virtual machines), and this way be able to produce accurate benchmarks in the process of developing our scaler.
 
 \section{Outcomes}
 % Final evaluation plan and experiments to run
