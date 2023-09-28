@@ -34,7 +34,7 @@
 \section{Project Idea}
 % Describe the project and how it relates to the course
 % Prior work and how it falls short, novelty of our approach
-There has been a trend towards building latency-sensitive applications with many single-purpose microservices as opposed to with monolithic services. Connected microservices are structured in the form of a DAG, where each microservice represents a node, and the containers for these services are typically provisioned over a collection of servers.
+There has been a trend towards building latency-sensitive applications with many single-purpose microservices as opposed to with monolithic services. Microservice meshes are structured in the form of a DAG, where each node represents a microservice, and an edge represents the flow of a request through an RPC call between services. Each microservice is typically hosted in its own container, which are in turn typically provisioned over a collection of servers.
 
 Resource management becomes a key challenge when working with distributed microservices. Meeting service level objectives (SLO) without overprovisioning resources is critical for providing performance guarantees and maintaining minimal operating costs for service providers. However, it can be difficult to identify where performance issues or bottlenecks originate from within complex microservice graphs.
 
@@ -62,6 +62,16 @@ We have decided a logical division of this project's goals into a temporal timel
         \item Setup of container services: mostly will involve writing scripts to handle horizontal scaling yaml configs and kubernetes (Esther)
         \item Sidecar/service mesh setup: general setup/scripting and implementation of request/response rate collection through the sidecar (Leo)
         \item Global controller setup: implement global knob tuning through the controller (scaling of the \# of service instances and resource limits) (Rahul)
+    \end{itemize}
+    \item Integration and deployment
+    \begin{itemize}
+        \item In this phase we will work together to combine the components into a single codebase and workflow.
+        \item We will also use CloudLab to deploy this first integrated prototype to get it ready for the next phase.
+    \end{itemize}
+    \item Testing and tuning
+    \begin{itemize}
+        \item Here we will debug and profile our implementation to make sure that everything is implemented according to plan.
+        \item Finally, we will tune the parameters of global scaler and experiment with different learning approaches in order to find the best solution for scaling our particular microservice mesh. 
     \end{itemize}
 \end{enumerate}
 \section{Resources}
