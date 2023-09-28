@@ -28,8 +28,8 @@
 \maketitle
 
 %%%%%%%%%%%%%  ABSTRACT GOES HERE %%%%%%%%%%%%%%
-\begin{abstract}
-\end{abstract}
+% \begin{abstract}
+% \end{abstract}
 
 \section{Project Idea}
 % Describe the project and how it relates to the course
@@ -78,18 +78,23 @@ Using CloudLab we will create a virtual cloud with enough machines to model many
 \section{Outcomes}\label{outcomes}
 % Questions to be answered
 % Final evaluation plan and experiments to run
+\subsection{Experiments}
+In evaluating our method, we want to understand some performance characteristics of the containerized microservice system. Particularly, we want to understand how our implementation compares to existing methods for scaling microservices under some fixed style of workload typical of microservices. Some of the methods we may be interested in comparing against are the Kubernetes Horizontal Pod Autoscaling \cite{kubernetes_hpa}, pHPA \cite{choi_phpa}, and COLA \cite{sachi_cola}. Interesting metrics would include end-to-end latency from the client's perspective and tracking hardware usage over time (CPU, memory, IO, etc.). 
+
+We may also want to investigate how different containerization topologies affect the performance of our system. That is, how does the placement of different services in different arrangements across available compute nodes change the behavior of our system. In this situation, we would again keep the workload fixed and measure both end-to-end latency and hardware resource usage.
+
+We also predict that there is some tradeoff between the overhead of telemetry being delivered to the controller and the controller's responsiveness. Understanding this tradeoff would also involve trying out different kinds of controllers with different expected frequencies of updates from nodes. Experimental setup would be similar to the above. 
+
 \subsection{Evaluation}
-questions: how does our method compare with other methods, how does containerization topology affect performance, what is the tradeoff between telemetry frequency overhead and controller responsiveness, what about microbursts, what controller behavior is good
+\paragraph*{75\% Goal} For a basic goal, we would want to have an experimental setup running which allows the sidecar proxies to send telemetry to a ``dumb'' controller which does not act on the information. This is a good lower bound on the work for this project as it would allow for at least a minimum understanding of how telemetry gathering in the service mesh affects the performance characteristics.
 
-measuring: end-to-end latency (most important), hardware resources (cpu/mem/io)
+\paragraph*{100\% Goal} For our expected goal, we would expect to implement an autoscaler that listens to telemetry data from the service mesh and improves overall performance, in addition to the requirements above.
 
-compare with \cite{kubernetes_hpa} (simple baseline), \cite{choi_phpa}, and maybe \cite{sachi_cola}
-
-experiments: fixed workload with various comparing methods, our method under various workloads, fixed workload with our method with different controllers
+\paragraph*{125\% Goal} For a stretch goal, we would be able to explore more complex autoscalers and telemetry gathering mechanisms. For example, machine learning based autoscalers would fit into this goal, as well as understanding characteristics of different kinds of microservices to scale them differently.
 
 \subsection{Impact}
 % Impact if successful 
-more efficient dynamic cloud resource usage for microservices -> lower power consumption, more responsive services for users
+If our project is successful, we imagine potential positive impacts for microservice deployments. In particular, we could see more efficient and dynamic cloud resource usage for microservice applications, which may result in lower power consumption and lower resource costs. In addition, we may see more responsive services on the client-side, which would be a general quality-of-life improvment for users of microservice-based applications.
 
 \bibliographystyle{abbrv} 
 \begin{small}
