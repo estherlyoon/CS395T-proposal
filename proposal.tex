@@ -40,9 +40,9 @@ Resource management becomes a key challenge when working with distributed micros
 
 Typically there are two forms of scaling used for the resource management of microservices. \textit{Vertical scaling} is a fine-grained scaling technique that modifies resource limits, such as CPU usage and I/O bandwidth usage. \textit{Horizontal scaling} is a more coarse-grained approach that adjusts the number of replicas of a microservice. Oftentimes, a global controller is used to perform either type of scaling.
 
-There are many prior approaches that leverage horizontal or vertical scaling to address microservice resource management. Sinan is a vertical scaling approach that uses an ML model to predict the end-to-end performance of per-tier resource allocations and scales resource limits accordingly. Another vertical scaler is AutoThrottle, which uses a combination of an application-level controller that uses online RL to set performance targets and per-microservice controllers to perform fine-grained CPU scaling based on the targets set. FIRM is a horizontal scaler which identifies bottleneck services using reinforcement learning. 
+There are many prior approaches that leverage horizontal or vertical scaling to address microservice resource management. Sinan \cite{sinan} is a vertical scaling approach that uses an ML model to predict the end-to-end performance of per-tier resource allocations and scales resource limits accordingly. Another vertical scaler is AutoThrottle \cite{autothrottle}, which uses a combination of an application-level controller that uses online RL to set performance targets and per-microservice controllers to perform fine-grained CPU scaling based on the targets set. FIRM \cite{firm} is a horizontal scaler which identifies bottleneck services using reinforcement learning. 
 
-These prior solutions use global metrics like end-to-end latency or local resource utilization metrics to scale microservices. However, two metrics for microservice performance that aren't often leveraged, yet can be much more informative, are the request arrival rates and request processing (depature) rates of each microservice. These rates can also be thought of as the ingress and egress \textit{queue lengths} of a microservice. If queue lengths are known at any given time of an application's execution, the real-time latencies of individual microservices could be clearly understood. With this latency knowledge, these \textit{queue length-based} solutions could more precisely identify bottlenecks in microservices that can subsequently be scaled up by a global controller. Powerchief is one such queue length-based method, however, it requires modifying an application for it to support request rate collection.
+These prior solutions use global metrics like end-to-end latency or local resource utilization metrics to scale microservices. However, two metrics for microservice performance that aren't often leveraged, yet can be much more informative, are the request arrival rates and request processing (depature) rates of each microservice. These rates can also be thought of as the ingress and egress \textit{queue lengths} of a microservice. If queue lengths are known at any given time of an application's execution, the real-time latencies of individual microservices could be clearly understood. With this latency knowledge, these \textit{queue length-based} solutions could more precisely identify bottlenecks in microservices that can subsequently be scaled up by a global controller. Powerchief \cite{powerchief} is one such queue length-based method, however, it requires modifying an application for it to support request rate collection.
 
 % Main solution
 To our knowledge, there is no queue length-based solution for autoscaling microservices that collects request rates in a way that is transparent to the application. For our project, we plan to build a service mesh to transparently capture queueing statistics through the sidecars attached to each microservice. Sidecars can capture request arrival and departure rates by acting as proxies for their respective microservices. Since all application traffic is passed through the proxy, we anticipate our final implementation to be able to successfully and easily collect statistics for any application using our service mesh framework. Sidecars will then transfer rate data to a global controller that performs analysis and horizontal scaling. For the global controller, we will formulate a heuristic-based policy using queue lengths and potentially other collected metrics. For more detailed goals, see Sections \ref{implementation} and \ref{outcomes}.
@@ -55,13 +55,19 @@ Other challenges to this approach include accounting for replicated microservice
 \section{Implementation Plan} \label{implementation}
 % What work must be done, and how it will be divided amonst us
 % 75%, 100% and 125% goals
-We have decided a logical division of this project's goals into a temporal timeline, as well as a subdivision of certain tasks into parallelizable parts to more effectively utilize our group of three. Here is said timeline:
+\paragraph*{75\% Goal} For a basic goal, we would want to have an experimental setup running which allows the sidecar proxies to send telemetry to a ``dumb'' controller which does not act on the information. This is a good lower bound on the work for this project as it would allow for at least a minimum understanding of how telemetry gathering in the service mesh affects the performance characteristics.
+
+\paragraph*{100\% Goal} For our expected goal, we would expect to implement an autoscaler that listens to telemetry data from the service mesh and improves overall performance, in addition to the requirements above.
+
+\paragraph*{125\% Goal} For a stretch goal, we would be able to explore more complex autoscalers and telemetry gathering mechanisms. For example, machine learning based autoscalers would fit into this goal, as well as understanding characteristics of different kinds of microservices to scale them differently.
+
+We have decided a logical division of this project's goals into a timeline, as well as a subdivision of certain tasks into parallelizable parts to more effectively utilize our group of three. Here is said timeline:
 \begin{enumerate}
     \item Initial steps and framework creation
     \begin{itemize}
-        \item Setup of container services: mostly will involve writing scripts to handle horizontal scaling yaml configs and kubernetes (Esther)
-        \item Sidecar/service mesh setup: general setup/scripting and implementation of request/response rate collection through the sidecar (Leo)
-        \item Global controller setup: implement global knob tuning through the controller (scaling of the \# of service instances and resource limits) (Rahul)
+        \item Setup of container services: mostly will involve writing scripts to handle horizontal scaling yaml configs and kubernetes. (Esther)
+        \item Sidecar and service mesh setup: general setup and scripting, implementation of request/response rate collection through the sidecar. (Leo)
+        \item Global controller setup: implement global knob tuning through the controller (scaling of the \# of service instances and resource limits). (Rahul)
     \end{itemize}
     \item Integration and deployment
     \begin{itemize}
@@ -71,7 +77,7 @@ We have decided a logical division of this project's goals into a temporal timel
     \item Testing and tuning
     \begin{itemize}
         \item Here we will debug and profile our implementation to make sure that everything is implemented according to plan.
-        \item Finally, we will tune the parameters of global scaler and experiment with different learning approaches in order to find the best solution for scaling our particular microservice mesh. 
+        \item Finally, we will tune the parameters of global scaler and experiment with different learning approaches in order to find the best solution for scaling our particular microservice mesh. This step will probably be easily divisible as there will be many parts to microbenchmark and multiple system-wide measurements to analyze (e.g. how commmunication granularity affects performance).
     \end{itemize}
 \end{enumerate}
 \section{Resources}
@@ -94,13 +100,6 @@ In evaluating our method, we want to understand some performance characteristics
 We may also want to investigate how different containerization topologies affect the performance of our system. That is, how does the placement of different services in different arrangements across available compute nodes change the behavior of our system. In this situation, we would again keep the workload fixed and measure both end-to-end latency and hardware resource usage.
 
 We also predict that there is some tradeoff between the overhead of telemetry being delivered to the controller and the controller's responsiveness. Understanding this tradeoff would also involve trying out different kinds of controllers with different expected frequencies of updates from nodes. Experimental setup would be similar to the above. 
-
-\subsection{Evaluation}
-\paragraph*{75\% Goal} For a basic goal, we would want to have an experimental setup running which allows the sidecar proxies to send telemetry to a ``dumb'' controller which does not act on the information. This is a good lower bound on the work for this project as it would allow for at least a minimum understanding of how telemetry gathering in the service mesh affects the performance characteristics.
-
-\paragraph*{100\% Goal} For our expected goal, we would expect to implement an autoscaler that listens to telemetry data from the service mesh and improves overall performance, in addition to the requirements above.
-
-\paragraph*{125\% Goal} For a stretch goal, we would be able to explore more complex autoscalers and telemetry gathering mechanisms. For example, machine learning based autoscalers would fit into this goal, as well as understanding characteristics of different kinds of microservices to scale them differently.
 
 \subsection{Impact}
 % Impact if successful 
