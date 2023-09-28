@@ -20,7 +20,7 @@
 % \crdata{X}
 % \date{}
 
-\title{CS395T Project Proposal: Using Fine-grained Metrics to Scale Microservices
+\title{CS395T Project Proposal: Using Fine-grained Queue Metrics to Scale Microservices
 }
 
 \author{Rahul Menon, Leo Orshansky, Esther Yoon}
@@ -34,25 +34,25 @@
 \section{Project Idea}
 % Describe the project and how it relates to the course
 % Prior work and how it falls short, novelty of our approach
-There is a trend towards the use of single-purpose microservices over monolithic services. Microservices are structures in the form of a DAG of container services and are divided among different machines.
+There has been a trend towards building latency-sensitive applications with many single-purpose microservices as opposed to with monolithic services. Connected microservices are structured in the form of a DAG, where each microservice represents a node, and the containers for these services are typically provisioned over a collection of servers.
 
-Resource management is a key challenges when working with distibuted microservices. Meeting service level objectives (SLO) without overprovisioning resources is critical for performance guarantees and resource management costs. However, it can be difficult to identify where performance issues originate from within complex microservice graphs.
+Resource management becomes a key challenge when working with distributed microservices. Meeting service level objectives (SLO) without overprovisioning resources is critical for providing performance guarantees and maintaining minimal operating costs for service providers. However, it can be difficult to identify where performance issues or bottlenecks originate from within complex microservice graphs.
 
-Typically there are two forms of scaling used for resource management of microservices. Vertical scaling is a fine-grained scaling technique that modifies resource limits, such CPU usage and I/O bandwidth usage. Horizontal scaling is a more coarse-grained approach that adjusts the number of replicas of a microservice. Oftentimes, a global controller is used to perform both types of scaling.
+Typically there are two forms of scaling used for the resource management of microservices. \textit{Vertical scaling} is a fine-grained scaling technique that modifies resource limits, such as CPU usage and I/O bandwidth usage. \textit{Horizontal scaling} is a more coarse-grained approach that adjusts the number of replicas of a microservice. Oftentimes, a global controller is used to perform either type of scaling.
 
-There are many prior approaches that leverage horizontal or vertical scaling to address microservice resource management.
+There are many prior approaches that leverage horizontal or vertical scaling to address microservice resource management. Sinan is a vertical scaling approach that uses an ML model to predict the end-to-end performance of per-tier resource allocations and scales resource limits accordingly. Another vertical scaler is AutoThrottle, which uses a combination of an application-level controller that uses online RL to set performance targets and per-microservice controllers to perform fine-grained CPU scaling based on the targets set. FIRM is a horizontal scaler which identifies bottleneck services using reinforcement learning. 
 
-Sinan is a vertical scaling approach that uses an ML model to predict the performance of per-tier resource allocations on end-to-end performance and scale resource limits accordingly. Another vertical scaler is AutoThrottle, which uses a combination of an application-level controller that uses online RL to set performance targets and per-microservice controllers and per-microservice controllers to perform fine-grained CPU scaling with local metrics. FIRM is a horizontal scaler which identifies bottleneck services using reinforcement learning. 
+These prior solutions use global metrics like end-to-end latency or local resource utilization metrics to scale microservices. However, two metrics for microservice performance that aren't often leveraged, yet can be much more informative, are the request arrival rates and request processing (depature) rates of each microservice. These rates can also be thought of as the ingress and egress \textit{queue lengths} of a microservice. If queue lengths are known at any given time of an application's execution, the real-time latencies of individual microservices could be clearly understood. With this latency knowledge, these \textit{queue length-based} solutions could more precisely identify bottlenecks in microservices that can subsequently be scaled up by a global controller. Powerchief is one such queue length-based method, however, it requires modifying an application for it to support request rate collection.
 
-These prior solutions use metrics like local or end-to-end latency and resource utilization. However, another informative metric for per-microservice performance is the request arrival rates and request processing (depature) rates of each microservice. If these request rates were known at any given time, we could understand the real-time latencies incurred by individual microservices. With this latency knowledge, these \textit{queue-length based} solutions can easily identify bottlenecks that need to be scaled up. Powerchief is one such queue-length based method, however, it requires application modification to record request rate information.
+% Main solution
+To our knowledge, there is no queue length-based solution for autoscaling microservices that collects request rates in a way that is transparent to the application. For our project, we plan to build a service mesh to transparently capture queueing statistics through the sidecars attached to each microservice. Sidecars can capture request arrival and departure rates by acting as proxies for their respective microservices. Since all application traffic is passed through the proxy, we anticipate our final implementation to be able to successfully and easily collect statistics for any application using our service mesh framework. Sidecars will then transfer rate data to a global controller that performs analysis and horizontal scaling. For the global controller, we will formulate a heuristic-based policy using queue lengths and potentially other collected metrics. For more detailed goals, see Sections \ref{implementation} and \ref{outcomes}.
 
-Modifying application code is an undesirable quality, yet is simpler than implementing request rate collection transparently. For our project, we propose to use service meshes to transparently capture queueing statistics. A service mesh acts as an infrastructure layer between microservices, providing sidecar containers that act as a proxies for each microservice. The sidecar can then capture request arrival and departure rates and transfer them to a global controller to perform scaling.
+% Challenges
+Our approach may require significant instrumentation to support transparent request rate collection, including setting up the service mesh and figuring out the best way to collect queue length statistics. In addition to this challenge, we will have to understand how to manage the communication overhead between sidecars and the centralized controller. For example, higher frequencies of communication will lead to more fine-grained information for the controller to act on, but will incur higher communication overheads.
 
-% Challenges/novelty:
-Our approach requires significant instrumentation to support transparent request rate collection. In addition to this challenge, we will have to understand how to manage the communication overhead between sidecars and the centralized controller. For example, higher frequencies of communication will lead to more fine-grained information for the controller to act on, but will incur higher communication overheads.
 Other challenges to this approach include accounting for replicated microservice startup time, evaluating how local scaling policies impact end-to-end performance, and examining how request arrival and departure rates may be impacted by dependencies among microservices.
 
-\section{Implementation Plan}
+\section{Implementation Plan} \label{implementation}
 % What work must be done, and how it will be divided amonst us
 % 75%, 100% and 125% goals
 We have decided a logical division of this project's goals into a temporal timeline, as well as a subdivision of certain tasks into parallelizable parts to more effectively utilize our group of three. Here is said timeline:
@@ -75,7 +75,7 @@ We will be utilizing the class's CloudLab project to allocate a testing cluster 
 \end{itemize}
 Using CloudLab we will create a virtual cloud with enough machines to model many different possible microservice mesh layouts (assignments of microservices to physical/virtual machines), and this way be able to produce accurate benchmarks in the process of developing our scaler.
 
-\section{Outcomes}
+\section{Outcomes}\label{outcomes}
 % Questions to be answered
 % Final evaluation plan and experiments to run
 \subsection{Evaluation}
