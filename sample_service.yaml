@@ -1,0 +1,24 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: sample-service-pod
+  labels:
+    app: sample-service
+spec:
+  initContainers:
+  - name: init-networking
+    image: venilnoronha/init-networking
+    securityContext:
+      capabilities:
+        add:
+        - NET_ADMIN
+      privileged: true
+  containers:
+  - name: service
+    image: kennethreitz/sample-service
+    ports:
+    - containerPort: 80
+  - name: proxy
+    image: venilnoronha/amazing-proxy
+    ports:
+    - containerPort: 8000
