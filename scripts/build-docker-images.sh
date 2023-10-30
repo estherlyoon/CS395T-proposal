@@ -1,6 +1,6 @@
 #!/bin/bash
-# Only changes I made to the DeathStarBench script:
-# Set the current user and don't push to registry
+# Only change I made to the DeathStarBench script:
+# Don't push to registry
 # (might configure to fix this later)
 # TODO set paths correctly 
 
@@ -8,7 +8,7 @@ cd $(dirname $0)/..
 
 EXEC="docker buildx"
 
-USER=$USER
+USER="igorrudyk1"
 
 TAG="latest"
 
