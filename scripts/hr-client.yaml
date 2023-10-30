@@ -1,0 +1,47 @@
+---
+apiVersion: apps/v1
+kind: Deployment 
+metadata:
+  name: hr-client
+  annotations:
+    kompose.cmd: kompose hr-client
+    kompose.version: 1.22.0 (955b78124)
+  labels:
+    io.kompose.service: hr-client
+    #death-star-project: hotel-res
+    #app: hr-client
+    #namespace: hotel-res
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      io.kompose.service: hr-client
+      #death-star-project: hotel-res
+      #app: hr-client
+  strategy: {}
+  template:
+    metadata:
+      annotations:
+        kompose.cmd: kompose hr-client
+        kompose.version: 1.22.0 (955b78124)
+#       sidecar.istio.io/inject: "true"
+      labels: 
+        io.kompose.service: hr-client
+      #  death-star-project: hotel-res
+      #  app: hr-client
+      name: hr-client
+      creationTimestamp: null 
+    spec:
+      containers:
+      - name: hr-client
+        image: ubuntu
+        command:  ["/bin/sh", "-c"]
+        args:
+          - apt-get -y update &&
+            apt-get -y upgrade &&
+            apt-get -y install dnsutils git vim python3 python3-aiohttp libssl-dev libz-dev luarocks iputils-ping lynx build-essential gcc bash curl &&
+            luarocks install luasocket &&
+            sleep 365d
+      restartPolicy: Always
+status: {}
+

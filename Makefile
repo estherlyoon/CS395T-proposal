@@ -1,49 +1,18 @@
-##
+MAKEFILE_PATH := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
+DEATHSTAR=$(MAKEFILE_PATH)/DeathStarBench
+BIN=$(MAKEFILE_PATH)/bin
 
-TARGETS = proposal
+submodule:
+	git submodule init
+	git submodule update
 
-TEXFILES = $(wildcard *.tex)
-PDFS = $(addsuffix .pdf,$(TARGETS))
+bin:
+	mkdir $(BIN)
 
-all: $(PDFS)
-
-%.pdf: %.tex %.bib %.blg %.toc $(TEXFILES)
-	pdflatex $*.tex
-	bibtex $*
-	pdflatex $*.tex
-	pdflatex $*.tex
-
-%.blg: %.bib 
-	pdflatex $*.tex
-	bibtex $*
-	pdflatex $*.tex
-
-%.toc: %.tex
-	pdflatex $*.tex
+wrk: submodule bin
+	cd $(DEATHSTAR)/wrk2 && \
+	sudo apt-get install libssl-dev libz-dev -y && make && \
+	cp wrk $(BIN) 
 
 clean:
-	/bin/rm -f $(PDFS) *.dvi *.aux *.ps *~ *.log *.out *.lot *.lof *.toc *.blg *.bbl url.sty
-
-FORCE:
-
-evince:
-	pdflatex $(TARGETS).tex
-	evince $(PDFS) &
-
-acro:
-	pdflatex $(TARGETS).tex
-	acroread $(PDFS) &
-
-osx:
-	pdflatex $(TARGETS).tex
-	open $(PDFS)
-
-windows:
-	pdflatex $(TARGETS).tex
-	explorer.exe $(PDFS) &
-
-home: osx
-
-check:
-	pdflatex $(TARGETS).tex | grep -i -e "undefined" -e "multiply"
-
+	rm -rf $(BIN) 
