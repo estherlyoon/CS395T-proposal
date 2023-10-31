@@ -1,19 +1,33 @@
-package proxy
+package main
 
 import (
+	"encoding/base64"
 	"fmt"
 	"io"
 	"net/http"
 	"time"
+
+	"github.com/prometheus/client_golang/prometheus"
+	"github.com/prometheus/client_golang/prometheus/promhttp"
 )
 
 const (
 	proxyPort   = 8000
 	servicePort = 80
+	serviceName = "SERVICE_NAME"
+)
+
+var inflightRequestGauge = prometheus.NewGauge(
+	prometheus.GaugeOpts{
+		Name: fmt.Sprintf("%s_inflight_requests", serviceName),
+		Help: fmt.Sprintf("The number of requests currently inflight (effectively, queue length) at service %s", serviceName),
+	},
 )
 
 // Create a structure to define the proxy functionality.
 type Proxy struct{}
+
+var promHandler = promhttp.Handler()
 
 func (p *Proxy) forwardRequest(req *http.Request) (*http.Response, time.Duration, error) {
 	// Prepare the destination endpoint to forward the request to.
@@ -25,11 +39,13 @@ func (p *Proxy) forwardRequest(req *http.Request) (*http.Response, time.Duration
 
 	// Create an HTTP client and a proxy request based on the original request.
 	httpClient := http.Client{}
-	proxyReq, err := http.NewRequest(req.Method, proxyUrl, req.Body)
+	proxyReq, _ := http.NewRequest(req.Method, proxyUrl, req.Body)
 
 	// Capture the duration while making a request to the destination service.
 	start := time.Now()
+	inflightRequestGauge.Inc()
 	res, err := httpClient.Do(proxyReq)
+	inflightRequestGauge.Dec()
 	duration := time.Since(start)
 
 	// Return the response, the request duration, and the error.
@@ -43,7 +59,7 @@ func (p *Proxy) writeResponse(w http.ResponseWriter, res *http.Response) {
 	}
 
 	// Set a special header to notify that the proxy actually serviced the request.
-	w.Header().Set("Server", "amazing-proxy")
+	w.Header().Set("Server", "sidecar-proxy")
 
 	// Set the status code returned by the destination service.
 	w.WriteHeader(res.StatusCode)
@@ -56,6 +72,11 @@ func (p *Proxy) writeResponse(w http.ResponseWriter, res *http.Response) {
 }
 
 func (p *Proxy) ServeHTTP(w http.ResponseWriter, req *http.Request) {
+	prometheusAuthCredential := base64.StdEncoding.EncodeToString([]byte("prometheus:prometheus"))
+	if auth, ok := req.Header["Authorization"]; ok && auth[0] == fmt.Sprintf("Basic %s", prometheusAuthCredential) {
+		promHandler.ServeHTTP(w, req)
+		return
+	}
 	// Forward the HTTP request to the destination service.
 	res, _, err := p.forwardRequest(req)
 
@@ -71,6 +92,8 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 }
 
 func main() {
-	// Listen on the predefined proxy port.
+	// prometheus.Unregister()
+	prometheus.MustRegister(inflightRequestGauge)
+	http.Handle("/metrics", promhttp.Handler())
 	http.ListenAndServe(fmt.Sprintf(":%d", proxyPort), &Proxy{})
 }

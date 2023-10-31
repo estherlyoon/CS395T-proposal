@@ -6,8 +6,8 @@ metadata:
     app: sample-service
 spec:
   initContainers:
-  - name: init-networking
-    image: venilnoronha/init-networking
+  - name: sidecar-init
+    image: thecoolmanz/init
     securityContext:
       capabilities:
         add:
@@ -15,10 +15,10 @@ spec:
       privileged: true
   containers:
   - name: service
-    image: kennethreitz/sample-service
+    image: kennethreitz/httpbin
     ports:
     - containerPort: 80
   - name: proxy
-    image: venilnoronha/amazing-proxy
+    image: thecoolmanz/proxy
     ports:
     - containerPort: 8000

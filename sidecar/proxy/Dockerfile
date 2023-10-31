@@ -1,8 +1,10 @@
-# Use the Go v1.12 image for the base.
-FROM golang:1.12
+FROM golang:1.21.3
 
+WORKDIR /app
 # Copy the proxy code to the container.
 COPY main.go .
+COPY go.mod .
+RUN go mod tidy
 
 # Run the proxy on container startup.
 ENTRYPOINT [ "go" ]
