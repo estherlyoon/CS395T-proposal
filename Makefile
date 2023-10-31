@@ -1,5 +1,6 @@
 MAKEFILE_PATH := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
-DEATHSTAR=$(MAKEFILE_PATH)/DeathStarBench
+DEATHSTAR_PATH=$(MAKEFILE_PATH)/DeathStarBench
+SIDECAR_PATH=$(MAKEFILE_PATH)/sidecar
 BIN=$(MAKEFILE_PATH)/bin
 
 submodule:
@@ -10,9 +11,17 @@ bin:
 	mkdir $(BIN)
 
 wrk: submodule bin
-	cd $(DEATHSTAR)/wrk2 && \
+	cd $(DEATHSTAR_PATH)/wrk2 && \
 	sudo apt-get install libssl-dev libz-dev -y && make && \
 	cp wrk $(BIN) 
 
+containers:
+	cd $(SIDECAR_PATH)/init && docker build -t $(USER)/init-iptables -f Dockerfile .
+	cd $(SIDECAR_PATH)/proxy && docker build -t $(USER)/sidecar -f Dockerfile .
+	docker push $(USER)/init-iptables
+	docker push $(USER)/sidecar
+
 clean:
 	rm -rf $(BIN) 
+	# Remove any resources in the running cluster 
+	kubectl delete all --all --namespace default
