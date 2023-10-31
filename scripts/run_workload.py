@@ -1,6 +1,10 @@
 import argparse
 import subprocess
 import time
+import os
+
+supported_deathstar = ['hotelReservation']
+supported_other = [] #['minimal']
 
 def all_pods_running():
     try:
@@ -19,16 +23,53 @@ def wait_on_pods():
     while not all_pods_running():
         time.sleep(5)
 
+def run_cmd(cmd):
+    try:
+        res = subprocess.run(cmd, shell=True, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
+        if res.returncode != 0:
+            print(f"Shell command {cmd} encountered an error:")
+            print(completed_process.stderr)
+    except subprocess.CalledProcessError as e:
+        print(f"Error running shell command {cmd}: {e}")
+    except Exception as e:
+        print(f"An error occurred running {cmd}: {e}")
+
+def run_deathstar(bench):
+    run_cmd('make wrk')
+
+    # Run build script for microservice containers
+    # TODO Make build script universal, just need to configure Dockerfile paths
+    run_cmd('scripts/build-docker-images.sh')
+
+    # TODO paths
+    run_cmd(f'kubectl apply -Rf ./DeathStarBench/{bench}/kubernetes/')
+    # Start hr-client
+    run_cmd(f'kubectl apply -f ./scripts/hr-client.yaml')
+
+    wait_on_pods()
+    
+    # Generate traffic within cluster through hr-client node
+    run_cmd(f'./scripts/workload_gen.sh')
+
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-b', '--benchmark', type=str)
     args = parser.parse_args()
 
-    # TODO run `kubectl apply -Rf <path-of-repo>/hotelReservation/kubernetes/`
-    wait_on_pods()
+    bench = args.benchmark
 
-    # Start hr-client if generating (`kubectl apply -f hr-client.yaml`)
-    # ^Should this + other stuff just be bash script? have to enter a kubernetes shell
+    # TODO start/stop cluster
+
+    if bench in supported_deathstar:
+        run_deathstar(bench) 
+    elif bench in supported_other:
+        print("Other benchmarks not supported yet.") 
+    else:
+        supp = ' '.join(supported_deathstar)
+        other = ' '.join(supported_other)
+        exit(f'Benchmark is not supported.\n \
+            > Supported DeathStar benchmarks: {supp} \n \
+            > Supported other benchmarks: {other}')
 
 
 if __name__ == "__main__":

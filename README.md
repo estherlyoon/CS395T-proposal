@@ -9,7 +9,9 @@
 The minimal example consists of a single deployment running an `nginx` service container alongside a sidecar.
 - Perform the Docker setup steps
 - Start Kubernetes cluster
-```minikube start```
+```
+minikube start
+```
 - Start the deployment
 ```
 envsubst < scripts/minimal/deployment.yaml | kubectl apply -f -
