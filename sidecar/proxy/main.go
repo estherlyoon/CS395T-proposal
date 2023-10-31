@@ -71,9 +71,13 @@ func (p *Proxy) writeResponse(w http.ResponseWriter, res *http.Response) {
 	res.Body.Close()
 }
 
+var prometheusAuthorization = fmt.Sprintf("Basic %s", base64.StdEncoding.EncodeToString([]byte("prometheus:prometheus")))
+
 func (p *Proxy) ServeHTTP(w http.ResponseWriter, req *http.Request) {
-	prometheusAuthCredential := base64.StdEncoding.EncodeToString([]byte("prometheus:prometheus"))
-	if auth, ok := req.Header["Authorization"]; ok && auth[0] == fmt.Sprintf("Basic %s", prometheusAuthCredential) {
+	if auth, ok := req.Header["Authorization"]; ok &&
+		auth[0] == prometheusAuthorization &&
+		req.RequestURI == "/metrics" {
+
 		promHandler.ServeHTTP(w, req)
 		return
 	}
