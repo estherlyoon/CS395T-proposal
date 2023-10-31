@@ -23,5 +23,7 @@ containers:
 
 clean:
 	rm -rf $(BIN) 
+
+clean-kube:
 	# Remove any resources in the running cluster 
 	kubectl delete all --all --namespace default
