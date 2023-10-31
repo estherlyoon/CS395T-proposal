@@ -1,29 +1,31 @@
 from typing import Tuple
-import grpc
 
 pod_types = {}
 pod_configs = {}
 service_queues = {}
 pod_queues = {}
 
-# takes in a message and returns the service name and the queue length of the service
-def msg_to_info(msg) -> Tuple[str, str, int]:
-    return "service_name", "pod_id", 10
+def get_info_from_prometheus():
+    # TODO: some kind of http request to get status info
+    pass
 
-def scale_up(queue_length) -> bool:
+def scale_up(queue_length: int) -> bool:
     # want to take into account host resources and queue length
     # trying to minimize latency of service
     return queue_length > 10
 
-def scale_down(queue_length) -> bool:
+def scale_down(queue_length: int) -> bool:
     # want to take into account host resources and queue length
     # trying to minimize number of necessary pods/service
     return queue_length < 2
 
+def scale_replicas(num: int, deployment_name: str):
+    # TODO: use k8s api to patch deployment to add or remove replica as needed
+    pass
+
 def main():
-    # TODO: receive messages somehow, grpc?
-    msg = ""
-    service_name, pod_id, queue_length = msg_to_info(msg)
+    # TODO: get status from prometheus
+    status = get_info_from_prometheus()
 
     if pod_id not in pod_types:
         # TODO: get pod info from k8s
