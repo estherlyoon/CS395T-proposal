@@ -1,6 +1,5 @@
 #!/bin/bash
 SCRIPT_DIR=$( cd -- "$( dirname -- "${BASH_SOURCE[0]}" )" &> /dev/null && pwd )
-
 hrclient=$(kubectl get pod | grep hr-client- | cut -f 1 -d " ")
 kubectl cp $SCRIPT_DIR/../DeathStarBench default/"${hrclient}":/root
 kubectl cp $SCRIPT_DIR/../bin/wrk/ default/"${hrclient}":/root/wrk

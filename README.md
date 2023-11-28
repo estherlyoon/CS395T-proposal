@@ -1,9 +1,9 @@
 ## Setup Instructions
 
 ### Docker
-- Login to Docker and add yourself to the `docker` group (`sudo groupadd docker`) so you can use docker without sudo
+- Login to Docker (docker login) and add yourself to the `docker` group (`sudo usermod -aG docker $USER; newgrp docker`) so you can use docker without sudo
+- Set envvar `DOCKER_USER` to your docker username to configure pushing and pulling built containers
 - Run `make containers` to build the sidecar and init containers and push them to Docker Hub
-- Set envvar `DOCKER_USER` to your docker username to configure the deployment script that pulls your built containers
 
 ### Minimal Example
 The minimal example consists of a single deployment running an `nginx` service container alongside a sidecar.

@@ -16,10 +16,10 @@ wrk: submodule bin
 	cp wrk $(BIN) 
 
 containers:
-	cd $(SIDECAR_PATH)/init && docker build -t $(USER)/init-iptables -f Dockerfile .
-	cd $(SIDECAR_PATH)/proxy && docker build -t $(USER)/sidecar -f Dockerfile .
-	docker push $(USER)/init-iptables
-	docker push $(USER)/sidecar
+	cd $(SIDECAR_PATH)/init && docker build -t $(DOCKER_USER)/init-iptables -f Dockerfile .
+	cd $(SIDECAR_PATH)/proxy && docker build -t $(DOCKER_USER)/sidecar -f Dockerfile .
+	docker push $(DOCKER_USER)/init-iptables
+	docker push $(DOCKER_USER)/sidecar
 
 clean:
 	rm -rf $(BIN) 

@@ -28,7 +28,9 @@ def run_cmd(cmd):
         res = subprocess.run(cmd, shell=True, check=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True)
         if res.returncode != 0:
             print(f"Shell command {cmd} encountered an error:")
-            print(completed_process.stderr)
+            print(res.stderr)
+        else:
+            print(res.stdout)
     except subprocess.CalledProcessError as e:
         print(f"Error running shell command {cmd}: {e}")
     except Exception as e:
@@ -39,17 +41,22 @@ def run_deathstar(bench):
 
     # Run build script for microservice containers
     # TODO Make build script universal, just need to configure Dockerfile paths
-    run_cmd('scripts/build-docker-images.sh')
+    print("Building Docker images...")
+    run_cmd('./scripts/build-docker-images.sh')
 
     # TODO paths
+    print("Starting pods...")
     run_cmd(f'kubectl apply -Rf ./DeathStarBench/{bench}/kubernetes/')
     # Start hr-client
     run_cmd(f'kubectl apply -f ./scripts/hr-client.yaml')
 
     wait_on_pods()
+    print("All pods are running. Generating workload...")
     
     # Generate traffic within cluster through hr-client node
-    run_cmd(f'./scripts/workload_gen.sh')
+    # TODO make universal
+    run_cmd('./scripts/workload_gen.sh')
+    print("Done generating workload.")
 
 def main():
     parser = argparse.ArgumentParser()
