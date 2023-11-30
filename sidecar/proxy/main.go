@@ -94,7 +94,5 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 func main() {
 	// prometheus.Unregister()
 	prometheus.MustRegister(inflightRequestGauge)
-	http.Handle("/metrics", promHandler)
-	http.Handle("/", &Proxy{})
-	http.ListenAndServe(fmt.Sprintf(":%d", proxyPort), nil)
+	http.ListenAndServe(fmt.Sprintf(":%d", proxyPort), &Proxy{})
 }
