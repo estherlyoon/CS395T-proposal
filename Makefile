@@ -27,3 +27,7 @@ clean:
 clean-kube:
 	# Remove any resources in the running cluster 
 	kubectl delete all --all --namespace default
+
+start-minimal:
+	envsubst < scripts/minimal/deployment.yaml | kubectl apply -f -
+	kubectl apply -f scripts/minimal/service.yaml
