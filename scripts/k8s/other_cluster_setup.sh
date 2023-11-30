@@ -1,6 +1,6 @@
 # Disable swap space
 sudo swapoff -a
-# Also comment out in /etc/fstab
+# MANUAL STEP: Also comment out in /etc/fstab
 
 # Install kubeadm, kubectl, and kubelet
 sudo apt-get update
