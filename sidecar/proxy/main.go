@@ -33,10 +33,6 @@ func (p *Proxy) forwardRequest(req *http.Request) (*http.Response, time.Duration
 	// Prepare the destination endpoint to forward the request to.
 	proxyUrl := fmt.Sprintf("http://127.0.0.1:%d%s", servicePort, req.RequestURI)
 
-	// Print the original URL and the proxied request URL.
-	fmt.Printf("Original URL: http://%s:%d%s\n", req.Host, servicePort, req.RequestURI)
-	fmt.Printf("Proxy URL: %s\n", proxyUrl)
-
 	// Create an HTTP client and a proxy request based on the original request.
 	httpClient := http.Client{}
 	proxyReq, _ := http.NewRequest(req.Method, proxyUrl, req.Body)
@@ -98,6 +94,7 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 func main() {
 	// prometheus.Unregister()
 	prometheus.MustRegister(inflightRequestGauge)
-	http.Handle("/metrics", promhttp.Handler())
-	http.ListenAndServe(fmt.Sprintf(":%d", proxyPort), &Proxy{})
+	http.Handle("/metrics", promHandler)
+	http.Handle("/", &Proxy{})
+	http.ListenAndServe(fmt.Sprintf(":%d", proxyPort), nil)
 }
