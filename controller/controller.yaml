@@ -1,0 +1,11 @@
+apiVersion: v1
+kind: Pod
+metadata:
+  name: clusterconfig
+spec:
+  containers:
+  - name: controller
+    image: ${DOCKER_USER)}/controller
+    ports:
+    - containerPort: 80
+
