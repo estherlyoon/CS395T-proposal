@@ -1,6 +1,7 @@
 MAKEFILE_PATH := $(dir $(abspath $(lastword $(MAKEFILE_LIST))))
 DEATHSTAR_PATH=$(MAKEFILE_PATH)/DeathStarBench
 SIDECAR_PATH=$(MAKEFILE_PATH)/sidecar
+CONTROLLER_PATH=$(MAKEFILE_PATH)/controller
 BIN=$(MAKEFILE_PATH)/bin
 
 submodule:
@@ -18,8 +19,10 @@ wrk: submodule bin
 containers:
 	cd $(SIDECAR_PATH)/init && docker build -t $(DOCKER_USER)/init-iptables -f Dockerfile .
 	cd $(SIDECAR_PATH)/proxy && docker build -t $(DOCKER_USER)/sidecar -f Dockerfile .
+	cd $(CONTROLLER_PATH)/prometheus && docker build -t $(DOCKER_USER)/controller-prometheus -f Dockerfile .
 	docker push $(DOCKER_USER)/init-iptables
 	docker push $(DOCKER_USER)/sidecar
+	docker push $(DOCKER_USER)/controller-prometheus
 
 clean:
 	rm -rf $(BIN) 

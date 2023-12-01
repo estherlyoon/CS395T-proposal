@@ -31,3 +31,16 @@ spec:
         image: ${DOCKER_USER}/sidecar:latest
         ports:
         - containerPort: 8000
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: ngnix-service
+spec:
+  selector:
+    app: nginx
+  type: NodePort
+  ports:
+  - protocol: TCP
+    port: 80 # Exposed port
+    targetPort: 8000 # Sidecar's port

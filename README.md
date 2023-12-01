@@ -22,7 +22,8 @@ minikube start
 ```
 - Start the deployment
 ```
-envsubst < scripts/minimal/deployment.yaml | kubectl apply -f -
+envsubst < scripts/minimal/nginx.yaml | kubectl apply -f -
+envsubst < scripts/minimal/controller.yaml | kubectl apply -f -
 ```
 TODO: Might move some of these steps into a bigger Python script to automate running services
 

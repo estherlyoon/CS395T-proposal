@@ -1,0 +1,7 @@
+scrape_configs:
+  - job_name: "kubernetes-pods"
+    basic_auth:
+      username: prometheus
+      password: prometheus
+    kubernetes_sd_configs:
+      - role: pod
