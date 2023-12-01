@@ -15,6 +15,11 @@ The minimal example consists of a single deployment running an `nginx` service c
 ```
 minikube start
 ```
+If this gives an error, try:
+```
+minikube delete --all --purge
+minikube start
+```
 - Start the deployment
 ```
 envsubst < scripts/minimal/deployment.yaml | kubectl apply -f -
