@@ -19,8 +19,8 @@ const (
 
 var inflightRequestGauge = prometheus.NewGauge(
 	prometheus.GaugeOpts{
-		Name: fmt.Sprintf("%s_inflight_requests", serviceName),
-		Help: fmt.Sprintf("The number of requests currently inflight (effectively, queue length) at service %s", serviceName),
+		Name: "inflight_requests",
+		Help: "The number of requests currently inflight (effectively, queue length) at the given pod",
 	},
 )
 

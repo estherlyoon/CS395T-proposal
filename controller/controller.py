@@ -1,7 +1,8 @@
 from __future__ import print_function
 from kubernetes import config, client
 from kubernetes.client.rest import ApiException
-import time
+from prometheus_api_client import PrometheusConnect
+import time, sys
 from typing import Tuple
 
 pod_types = {}
@@ -27,9 +28,8 @@ def scale_deployment(name, scale):
     except ApiException as e:
         print("Exception when calling AppsV1Api->patch_namespaced_deployment_scale: %s\n" % e)
 
-def get_info_from_prometheus():
-    # TODO: some kind of http request to get status info
-    pass
+def get_info_from_prometheus(prom):
+    return prom.get_current_metric_value(metric_name="inflight_requests")
 
 def scale_up(queue_length: int) -> bool:
     # want to take into account host resources and queue length
@@ -49,9 +49,17 @@ def main():
     config.load_incluster_config()
     scale_interval = 10
 
+    prom = PrometheusConnect(disable_ssl=True)
+    print("connected to prometheus", file = sys.stderr)
+    print(prom.all_metrics(), file = sys.stderr)
+
+
     while True:
         # TODO: get status from prometheus
-        status = get_info_from_prometheus()
+        status = get_info_from_prometheus(prom)
+        print(status, file = sys.stderr)
+        time.sleep(10)
+        continue
 
         if pod_id not in pod_types:
             # TODO: get pod info from k8s

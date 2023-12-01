@@ -19,9 +19,11 @@ wrk: submodule bin
 containers:
 	cd $(SIDECAR_PATH)/init && docker build -t $(DOCKER_USER)/init-iptables -f Dockerfile .
 	cd $(SIDECAR_PATH)/proxy && docker build -t $(DOCKER_USER)/sidecar -f Dockerfile .
+	cd $(CONTROLLER_PATH) && docker build -t $(DOCKER_USER)/controller -f Dockerfile .
 	cd $(CONTROLLER_PATH)/prometheus && docker build -t $(DOCKER_USER)/controller-prometheus -f Dockerfile .
 	docker push $(DOCKER_USER)/init-iptables
 	docker push $(DOCKER_USER)/sidecar
+	docker push $(DOCKER_USER)/controller
 	docker push $(DOCKER_USER)/controller-prometheus
 
 clean:
@@ -32,5 +34,5 @@ clean-kube:
 	kubectl delete all --all --namespace default
 
 start-minimal:
-	envsubst < scripts/minimal/deployment.yaml | kubectl apply -f -
-	kubectl apply -f scripts/minimal/service.yaml
+	envsubst < scripts/minimal/nginx.yaml | kubectl apply -f -
+	envsubst < scripts/minimal/controller.yaml | kubectl apply -f -

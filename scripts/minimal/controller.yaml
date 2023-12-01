@@ -1,13 +1,8 @@
 apiVersion: v1
-kind: Namespace
-metadata:
-  name: monitoring
----
-apiVersion: v1
 kind: ServiceAccount
 metadata:
-  namespace: monitoring
-  name: prometheus
+  namespace: default
+  name: controller
 ---
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRole
@@ -30,21 +25,48 @@ rules:
 apiVersion: rbac.authorization.k8s.io/v1
 kind: ClusterRoleBinding
 metadata:
-  name: prometheus-discoverer
+  name: controller-discoverer
 roleRef:
   apiGroup: rbac.authorization.k8s.io
   kind: ClusterRole
   name: discoverer
 subjects:
 - kind: ServiceAccount
-  name: prometheus
-  namespace: monitoring
+  name: controller
+  namespace: default
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: deployments-scale
+rules:
+  - apiGroups: ["apps"]
+    resources:
+      - deployments/scale
+    resourceNames: ["nginx"]
+    verbs:
+      - update
+      - patch
+      - read
+---
+kind: ClusterRoleBinding
+apiVersion: rbac.authorization.k8s.io/v1
+metadata:
+  name: controller-deployments-scale
+subjects:
+- kind: ServiceAccount
+  name: controller
+  namespace: default
+roleRef:
+  kind: ClusterRole
+  name: deployments-scale
+  apiGroup: rbac.authorization.k8s.io
 ---
 apiVersion: apps/v1
 kind: Deployment
 metadata:
   name: controller
-  namespace: monitoring
+  namespace: default
   labels:
     app: controller
 spec:
@@ -57,8 +79,12 @@ spec:
       labels:
         app: controller
     spec:
-      serviceAccountName: prometheus
+      serviceAccountName: controller
       containers:
+      - name: controller
+        image: ${DOCKER_USER}/controller
+        ports:
+        - containerPort: 80
       - name: prometheus
         image: ${DOCKER_USER}/controller-prometheus
         ports:
@@ -68,7 +94,7 @@ apiVersion: v1
 kind: Service
 metadata:
   name: prometheus
-  namespace: monitoring
+  namespace: default
 spec:
   selector:
     app: controller
