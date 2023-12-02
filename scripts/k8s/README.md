@@ -1,4 +1,4 @@
-The manual steps you need to do to set up the cluster.
+This folder contains setup scripts for a physical kubernetes cluster with the Horizontal Pod Autoscaler enabled. This README also details the manual steps you need to do to set up the cluster.
 
 ## If setting up the controller ##
 ```bash controller_init.sh```

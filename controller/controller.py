@@ -3,6 +3,7 @@ from kubernetes import config, client
 from kubernetes.client.rest import ApiException
 from prometheus_api_client import PrometheusConnect
 import time, sys
+import datetime
 from typing import Tuple
 
 pod_types = {}
@@ -10,7 +11,12 @@ pod_configs = {}
 service_queues = {}
 pod_queues = {}
 
-def scale_deployment(name, scale):
+def log(string):
+    timestamp = time.time()
+    dt_object = datetime.utcfromtimestamp(timestamp)
+    print(dt_object.strftime('%Y-%m-%d_%H-%M-%S'), string)
+
+def scale_replicas(name: str, scale: int):
     api_instance = client.AppsV1Api()
 
     # Get current number of replicas
@@ -19,14 +25,14 @@ def scale_deployment(name, scale):
         read_resp = api_instance.read_namespaced_deployment_scale(name, 'default')
         curr_replicas = read_resp.spec.replicas
     except ApiException as e:
-        print("Exception when calling AppsV1Api->read_namespaced_deployment_scale: %s\n" % e)
+        log("Exception when calling AppsV1Api->read_namespaced_deployment_scale: %s\n" % e)
 
     body = {'spec': {'replicas': curr_replicas+scale}}
     try:                                                                        
         scale_resp = api_instance.patch_namespaced_deployment_scale(name, 'default', body)
-        print(f"> Scaled from {curr_replicas} to {scale_resp.spec.replicas} replicas")
+        log(f"deployment:{name},old-replicas:{curr_replicas},replicas:{scale_resp.spec.replicas}")
     except ApiException as e:
-        print("Exception when calling AppsV1Api->patch_namespaced_deployment_scale: %s\n" % e)
+        log("Exception when calling AppsV1Api->patch_namespaced_deployment_scale: %s\n" % e)
 
 def get_info_from_prometheus(prom):
     return prom.get_current_metric_value(metric_name="inflight_requests")
@@ -41,10 +47,6 @@ def scale_down(queue_length: int) -> bool:
     # trying to minimize number of necessary pods/service
     return queue_length < 2
 
-def scale_replicas(num: int, deployment_name: str):
-    # TODO: use k8s api to patch deployment to add or remove replica as needed
-    pass
-
 def main():
     config.load_incluster_config()
     scale_interval = 10
@@ -52,7 +54,6 @@ def main():
     prom = PrometheusConnect(disable_ssl=True)
     print("connected to prometheus", file = sys.stderr)
     print(prom.all_metrics(), file = sys.stderr)
-
 
     while True:
         status = get_info_from_prometheus(prom)
@@ -72,9 +73,9 @@ def main():
 
         pod_queues[pod_id] = queue_length
         if scale_up(service_queues[service_name]):
-            scale_deployment(service_name, 1)
+            scale_replicas(service_name, 1)
         elif scale_down(service_queues[service_name]):
-            scale_deployment(service_name, -1)
+            scale_replicas(service_name, -1)
 
         time.sleep(scale_interval)
 

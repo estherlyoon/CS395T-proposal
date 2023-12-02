@@ -4,11 +4,12 @@ import time
 import os
 from datetime import datetime
 import signal
+import yaml
 
 supported_deathstar = ['hotelReservation']
 supported_other = [] #['minimal']
 
-supported_autoscalers = ['KHPA']
+supported_autoscalers = ['KHPA', 'ERL']
 
 bench_root = 'artifacts/'
 BENCH_DIR = None
@@ -75,52 +76,95 @@ def delete_hpa():
     for deployment in deployments:
         run_cmd(f'kubectl delete hpa {deployment}')
 
+def delete_erl():
+    # Don't need to do anything if it's just a pod
+    pass
+
 def delete_autoscaler(autoscaler):
     if autoscaler == 'KHPA':
         delete_hpa()
+    elif autoscaler == 'ERL':
+        delete_erl()
 
-def run_hpa():
+def run_hpa(config):
     global BENCH_DIR
+    arg_string = ""
+    for arg in config['args']:
+        arg_string += f" --{list(arg.keys())[0]}={list(arg.values())[0]}"
+
     deployments = get_deployments()
     for deployment in deployments:
-        run_cmd(f'kubectl autoscale deployment {deployment} --cpu-percent=50 --min=1 --max=10')
+        run_cmd(f'kubectl autoscale deployment {deployment}{arg_string}')
     time.sleep(5)
     # Run background process to capture hpa watch output
-    out_dir = os.path.join(BENCH_DIR, 'autoscaler.out')
+    out_dir = os.path.join(BENCH_DIR, 'autoscaler_hpa.out')
     process = run_background(f'kubectl get hpa --watch | tee -a {out_dir}') 
     return process
 
-def run_autoscaler(autoscaler):
+def run_erl(config):
+    # TODO if needed
+    for arg in config['args']:
+        continue
+
+    # TODO how to make it distinct for each deployment,
+    # OR run one for all deployments
+    deployments = get_deployments()
+    for deployment in deployments:
+        run_cmd(f'envsubst < ./scripts/minimal/controller.yaml | kubectl apply -f -')
+
+    out_dir = os.path.join(BENCH_DIR, 'autoscaler_erl.out')
+    process = run_background(f'kubectl logs -f deployment/controller | tee -a {out_dir}') 
+    return process
+
+def run_autoscaler(autoscaler, yaml_config):
+    config = load_autoscaler_config(yaml_config)
     if autoscaler == 'KHPA':
-        return run_hpa()
+        return run_hpa(config)
+    elif autoscaler == 'ERL':
+        return run_erl(config)
+
+"""
+#expected config:
+autoscaler: KHPA
+args:
+    - arg1: val1
+    - arg2: val2
+"""
+def load_autoscaler_config(config):
+    try:
+        with open(config, 'r') as file:
+            config = yaml.safe_load(file)
+    except FileNotFoundError:
+        config = yaml.safe_load(config)
+    return config
 
 # TODO Expose jaeger?
-def run_deathstar(bench, autoscaler):
+def run_deathstar(bench, autoscaler, autoscaler_config):
     global BENCH_DIR
     run_cmd('make wrk')
 
     # Run build script for microservice containers
     # TODO Make build script universal, just need to configure Dockerfile paths
     print("Building Docker images...")
-    run_cmd('./scripts/build-docker-images.sh')
+    run_cmd(f'./bench/{bench}/build-docker-images.sh')
 
     # TODO universal paths, need to make DeathStar fork for other benchmarks
     # Fork from the old branch linked in notes
     print("Starting pods...")
-    run_cmd(f'kubectl apply -Rf ./DeathStarBench/{bench}/kubernetes/')
+    run_cmd(f'kubectl apply -Rf ./bench/{bench}/kubernetes/')
     # Start hr-client
-    run_cmd(f'kubectl apply -f ./scripts/hr-client.yaml')
+    run_cmd(f'kubectl apply -f ./bench/{bench}/hr-client.yaml')
 
     wait_on_pods()
     print("All pods are running.")
 
     print(f"Enabling {autoscaler} autoscaler...")
-    autoscaler_process = run_autoscaler(autoscaler)
+    autoscaler_process = run_autoscaler(autoscaler, autoscaler_config)
     
     # Generate traffic within cluster through hr-client node
     # TODO make universal
     print("Generating workload...")
-    gen_res = run_cmd('./scripts/workload_gen.sh')
+    gen_res = run_cmd('./bench/{bench}/workload_gen.sh')
     print("Done generating workload.")
 
     # Write workload gen output
@@ -138,10 +182,13 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-b', '--benchmark', type=str)
     parser.add_argument('-a', '--autoscaler', type=str, default='KHPA')
+    parser.add_argument('-y', '--yaml', type=str,
+        default='{\'autoscaler\': \'KHPA\', \'args\': [{\'cpu-percent\': 50}, {\'min\': 1}, {\'max\': 10}]}',
+        help="Either a yaml file path OR a string representing the yaml config for the chosen autoscaler")
     args = parser.parse_args()
-
     bench = args.benchmark
     autoscaler = args.autoscaler
+    yaml = args.yaml
 
     if not os.path.exists(bench_root):
         os.mkdir(bench_root)
@@ -157,6 +204,9 @@ def main():
     if os.path.islink(latest_dir):
         os.unlink(latest_dir)
     os.symlink(BENCH_DIR, latest_dir)
+    with open(os.path.join(BENCH_DIR, 'config.txt'), 'w') as f:
+        config = load_autoscaler_config(yaml)
+        f.write(f"benchmark:{args.benchmark}\nautoscaler:{args.autoscaler}\nconfig:{config}")
 
     if autoscaler not in supported_autoscalers:
         scalers = ' '.join(supported_autoscalers)
@@ -164,7 +214,7 @@ def main():
             > Supported autoscalers: {scalers}')
 
     if bench in supported_deathstar:
-        run_deathstar(bench, autoscaler) 
+        run_deathstar(bench, autoscaler, yaml) 
     elif bench in supported_other:
         print("Other benchmarks not supported yet.") 
     else:
