@@ -17,14 +17,14 @@ def scale_deployment(name, scale):
     curr_replicas = 1
     try:
         read_resp = api_instance.read_namespaced_deployment_scale(name, 'default')
-        curr_replicas = read_resp['spec']['replicas'] # TODO haven't checked, but smth like this
+        curr_replicas = read_resp.spec.replicas
     except ApiException as e:
         print("Exception when calling AppsV1Api->read_namespaced_deployment_scale: %s\n" % e)
 
     body = {'spec': {'replicas': curr_replicas+scale}}
     try:                                                                        
         scale_resp = api_instance.patch_namespaced_deployment_scale(name, 'default', body)
-        print(scale_resp)
+        print(f"> Scaled from {curr_replicas} to {scale_resp.spec.replicas} replicas")
     except ApiException as e:
         print("Exception when calling AppsV1Api->patch_namespaced_deployment_scale: %s\n" % e)
 
@@ -55,7 +55,6 @@ def main():
 
 
     while True:
-        # TODO: get status from prometheus
         status = get_info_from_prometheus(prom)
         print(status, file = sys.stderr)
         time.sleep(10)

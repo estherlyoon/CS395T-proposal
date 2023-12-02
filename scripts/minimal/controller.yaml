@@ -43,11 +43,8 @@ rules:
   - apiGroups: ["apps"]
     resources:
       - deployments/scale
-    resourceNames: ["nginx"]
-    verbs:
-      - update
-      - patch
-      - read
+    resourceNames: []
+    verbs: ["*"]
 ---
 kind: ClusterRoleBinding
 apiVersion: rbac.authorization.k8s.io/v1
