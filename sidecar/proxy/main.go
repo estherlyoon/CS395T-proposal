@@ -5,6 +5,8 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"os"
+	"strconv"
 	"time"
 
 	"github.com/prometheus/client_golang/prometheus"
@@ -12,10 +14,10 @@ import (
 )
 
 const (
-	proxyPort   = 8000
-	servicePort = 80
-	serviceName = "SERVICE_NAME"
+	proxyPort = 8000
 )
+
+var servicePort, _ = strconv.Atoi(os.Getenv("SERVICE_PORT"))
 
 var inflightRequestGauge = prometheus.NewGauge(
 	prometheus.GaugeOpts{

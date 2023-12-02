@@ -22,11 +22,17 @@ spec:
             add:
             - NET_ADMIN
           privileged: true
+        env:
+        - name: SERVICE_PORT
+          value: "80"
       containers:
       - name: nginx
         image: nginx
         ports:
         - containerPort: 80
+        env:
+        - name: SERVICE_PORT
+          value: "80"
       - name: sidecar 
         image: ${DOCKER_USER}/sidecar:latest
         ports:
