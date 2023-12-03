@@ -6,14 +6,16 @@ from datetime import datetime
 import signal
 import yaml
 
-supported_deathstar = ['hotelReservation']
+supported_deathstar = ['hotelReservation', 'mediaMicroservices', 'socialNetwork']
+chart_names = {'hotelReservation': 'hotelreservation',
+        'mediaMicroservices': 'mediamicroservices',
+        'socialNetwork': 'socialnetwork'}
 supported_other = [] #['minimal']
 
 supported_autoscalers = ['KHPA', 'ERL']
 
 bench_root = 'artifacts/'
 BENCH_DIR = None
-chart_names = {'hotelReservation': 'hotelreservation'}
 
 def all_pods_running():
     try:
@@ -144,14 +146,14 @@ def run_deathstar(bench, autoscaler, autoscaler_config, build=False, run=False):
         # Run build script for microservice containers
         run_cmd('make wrk')
         print("Building Docker images...")
-        run_cmd(f'./bench/{bench}/build-docker-images.sh')
+        run_cmd(f'./bench/{bench}/init.sh')
     else:
         print("Skipping build images.")
 
     if run:
         print("Starting pods...")
         run_cmd(f'helm install {chart_names[bench]} ./bench/DeathStarBench/{bench}/helm-chart/{chart_names[bench]}')
-        run_cmd(f'kubectl apply -f ./bench/{bench}/hr-client.yaml')
+        run_cmd(f'kubectl apply -f ./bench/hr-client.yaml')
     else:
         print("Skipping start pods.")
 
