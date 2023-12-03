@@ -7,3 +7,7 @@ proposal.blg
 proposal.fdb_latexmk
 proposal.fls
 proposal.synctex.gz
+artifacts/
+bin/
+*.log
+*.out

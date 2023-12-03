@@ -80,7 +80,8 @@ def main():
     print("connected to prometheus", file = sys.stderr)
     print(prom.all_metrics(), file = sys.stderr)
     deployments = get_deployments()
-    log("deployments:", deployments)
+    log("deployments:")
+    log(deployments)
 
     while True:
         status = get_info_from_prometheus(prom)

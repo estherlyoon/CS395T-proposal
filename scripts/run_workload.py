@@ -13,6 +13,7 @@ supported_autoscalers = ['KHPA', 'ERL']
 
 bench_root = 'artifacts/'
 BENCH_DIR = None
+chart_names = {'hotelReservation': 'hotelreservation'}
 
 def all_pods_running():
     try:
@@ -149,7 +150,7 @@ def run_deathstar(bench, autoscaler, autoscaler_config, build=False, run=False):
 
     if run:
         print("Starting pods...")
-        run_cmd(f'kubectl apply -Rf ./bench/DeathStarBench/{bench}/kubernetes/')
+        run_cmd(f'helm install {chart_names[bench]} ./bench/DeathStarBench/{bench}/helm-chart/{chart_names[bench]}')
         run_cmd(f'kubectl apply -f ./bench/{bench}/hr-client.yaml')
     else:
         print("Skipping start pods.")
@@ -226,6 +227,7 @@ def main():
 
     # Delete all deployments (have option to keep them up normally, this is for testing) (or should they be cold?)
     if args.delete:
+        run_cmd('helm uninstall {chart_names[bench]}')
         run_cmd('kubectl delete deployment --all --namespace=default')
         run_cmd('kubectl delete pod --all --namespace=default')
 

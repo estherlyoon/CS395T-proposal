@@ -4,6 +4,8 @@ SIDECAR_PATH=$(MAKEFILE_PATH)/sidecar
 CONTROLLER_PATH=$(MAKEFILE_PATH)/controller
 BIN=$(MAKEFILE_PATH)/bin
 
+.PHONY: controller containers start-minimal
+
 submodule:
 	git submodule init
 	git submodule update
@@ -19,12 +21,13 @@ wrk: submodule bin
 containers:
 	cd $(SIDECAR_PATH)/init && docker build -t $(DOCKER_USER)/init-iptables -f Dockerfile .
 	cd $(SIDECAR_PATH)/proxy && docker build -t $(DOCKER_USER)/sidecar -f Dockerfile .
-	cd $(CONTROLLER_PATH) && docker build -t $(DOCKER_USER)/controller -f Dockerfile .
 	cd $(CONTROLLER_PATH)/prometheus && docker build -t $(DOCKER_USER)/controller-prometheus -f Dockerfile .
 	docker push $(DOCKER_USER)/init-iptables
 	docker push $(DOCKER_USER)/sidecar
+
+controller:
+	cd $(CONTROLLER_PATH) && docker build -t $(DOCKER_USER)/controller -f Dockerfile .
 	docker push $(DOCKER_USER)/controller
-	docker push $(DOCKER_USER)/controller-prometheus
 
 clean:
 	rm -rf $(BIN) 
