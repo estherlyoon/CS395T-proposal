@@ -1,5 +1,7 @@
+import os
 import argparse
 import yaml
+import glob
 
 def get_field_values_by_key(data, key):
     results = []
@@ -16,6 +18,7 @@ def get_field_values_by_key(data, key):
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-y', '--yaml', type=str)
+    parser.add_argument('-o', '--outpath', type=str)
     args = parser.parse_args()
 
     """
@@ -24,38 +27,47 @@ def main():
         - add sidecar container, configured with the right port
         - also add SERVICE_PORT env var to both
         - add name label
-    how to get right port?
-
-    {'apiVersion': 'apps/v1', 'kind': 'Deployment', 'metadata': {'name': 'nginx', 'labels': {'app': 'nginx'}}, 'spec': {'replicas': 1, 'selector': {'matchLabels': {'app': 'nginx'}}, 'template': {'metadata': {'labels': {'app': 'nginx'}}, 'spec': {'initContainers': [{'name': 'init-iptables', 'image': '${DOCKER_USER}/init-iptables:latest', 'securityContext': {'capabilities': {'add': ['NET_ADMIN']}, 'privileged': True}, 'env': [{'name': 'SERVICE_PORT', 'value': '80'}]}], 'containers': [{'name': 'nginx', 'image': 'nginx', 'ports': [{'containerPort': 80}], 'env': [{'name': 'SERVICE_PORT', 'value': '80'}]}, {'name': 'sidecar', 'image': '${DOCKER_USER}/sidecar:latest', 'ports': [{'containerPort': 8000}]}]}}}}
-
-    kind: Deployment
     """
-
-    with open(args.yaml, 'r') as f:
-        data = yaml.safe_load_all(f)
-        print(data)
-    exit()
 
     yaml_paths = []
     if os.path.isfile(args.yaml) and args.yaml.endswith('.yaml'):
-        yaml_paths.append(input_path)
+        yaml_paths.append(args.yaml)
     elif os.path.isdir(args.yaml):
-        yaml_paths.extend(glob.glob(os.path.join(args.yaml, '*.yaml')))
+        for root, dirs, files in os.walk(args.yaml):
+            yaml_paths.extend(glob.glob(os.path.join(root, '*.yaml')))
     else:
-        print(f"Invalid input: {input_path}")
+        print(f"Invalid input: {args.yaml}")
 
     for yaml_file in yaml_paths:
         with open(yaml_file, 'r') as file:
-            all_data = yaml.safe_load_all(file)
-            for data in all_data:
-                if data['kind'] != 'Deployment':
-                    continue
+            data = yaml.safe_load(file)
+            if data['kind'] != 'Deployment':
+                continue
+            print(yaml_file)
 
-                container_ports = get_field_values_by_key(data, 'containerPort')
+            container_ports = get_field_values_by_key(data, 'containerPort')
 
-                sidecar_field = {}
+            init_field = [{'name': 'init-iptables',
+                'image': '${DOCKER_USER}/init-iptables:latest',
+                'securityContext': {'capabilities': {'add': ['NET_ADMIN']}, 'privileged': True},
+                'env': []}]
 
-                data['spec']['']
+            sidecar_field = {'name': 'sidecar',
+                    'image': '${DOCKER_USER}/sidecar:latest',
+                    'ports': [{'containerPort': 8000}],
+                    'env': []}
+
+            # We don't support multiple containerPorts right now
+            for port in container_ports[:1]:
+                init_field[0]['env'].append({'name': 'SERVICE_PORT', 'value': port})
+                sidecar_field['env'].append({'name': 'SERVICE_PORT', 'value': port})
+
+            data['spec']['template']['spec']['initContainers'] = init_field
+            data['spec']['template']['spec']['containers'].append(sidecar_field)
+            data['metadata']['labels']['app'] = data['metadata']['name']
+
+            with open(os.path.join(args.outpath, 'new_' + os.path.basename(yaml_file)), 'w') as file:
+                yaml.dump(data, file, default_flow_style=False)
 
 if __name__ == "__main__":
     main()
