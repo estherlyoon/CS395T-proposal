@@ -152,7 +152,10 @@ def run_deathstar(bench, autoscaler, autoscaler_config, build=False, run=False):
 
     if run:
         print("Starting pods...")
-        run_cmd(f'helm install {chart_names[bench]} ./bench/DeathStarBench/{bench}/helm-chart/{chart_names[bench]}')
+        docker_user = os.environ.get('DOCKER_USER')
+        if not docker_user:
+            exit('Must set envvar DOCKER_USER to docker username')
+        run_cmd(f'helm install {chart_names[bench]} --set global.dockerUser={docker_user} ./bench/DeathStarBench/{bench}/helm-chart/{chart_names[bench]}')
         run_cmd(f'kubectl apply -f ./bench/hr-client.yaml')
     else:
         print("Skipping start pods.")
