@@ -1,11 +1,11 @@
 #!/bin/bash
 
-bash install_containerd.sh
-bash other_cluster_setup.sh
+#bash install_containerd.sh
+#bash other_cluster_setup.sh
 
 # CIDR is specified for running with Flannel
 # MANUAL STEP: Save the token output from this command
-kubeadm init --pod-network-cidr=10.244.0.0/16 --cri-socket=/run/containerd/containerd.sock
+sudo kubeadm init --pod-network-cidr=10.244.0.0/16 --cri-socket=/run/containerd/containerd.sock
 
 # To start using your cluster, run the following:
 mkdir -p $HOME/.kube

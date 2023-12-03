@@ -39,3 +39,5 @@ To test that the metrics server is up and running, you can run
 and you can also check the pod status with
 
 ```kubectl get pods -nkube-system```
+
+TODO also need to apporve the certificates

@@ -30,7 +30,7 @@ envsubst < scripts/minimal/controller.yaml | kubectl apply -f -
 The `run_workload.py` script builds necessary docker images, starts a microservice benchmark and the specified autoscaler, and generated requests. Results are output to `artifacts/latest`. To run:
 
 ```
-python3 ./scripts/run_workload.py -b hotelReservation
+python3 ./scripts/run_workload.py -b hotelReservation --build --run
 ```
 
 #### Exposing jaeger ports
