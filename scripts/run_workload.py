@@ -106,8 +106,6 @@ def run_erl(config):
     for arg in config['args']:
         continue
 
-    # TODO how to make it distinct for each deployment,
-    # OR run one for all deployments
     deployments = get_deployments()
     for deployment in deployments:
         run_cmd(f'envsubst < ./scripts/minimal/controller.yaml | kubectl apply -f -')
@@ -139,18 +137,22 @@ def load_autoscaler_config(config):
     return config
 
 # TODO Expose jaeger?
-def run_deathstar(bench, autoscaler, autoscaler_config):
+def run_deathstar(bench, autoscaler, autoscaler_config, build=False, run=False):
     global BENCH_DIR
-    run_cmd('make wrk')
+    if build:
+        # Run build script for microservice containers
+        run_cmd('make wrk')
+        print("Building Docker images...")
+        run_cmd(f'./bench/{bench}/build-docker-images.sh')
+    else:
+        print("Skipping build images.")
 
-    # Run build script for microservice containers
-    print("Building Docker images...")
-    run_cmd(f'./bench/{bench}/build-docker-images.sh')
-
-    print("Starting pods...")
-    run_cmd(f'kubectl apply -Rf ./bench/DeathStarBench/{bench}/kubernetes/')
-    # Start hr-client
-    run_cmd(f'kubectl apply -f ./bench/{bench}/hr-client.yaml')
+    if run:
+        print("Starting pods...")
+        run_cmd(f'kubectl apply -Rf ./bench/DeathStarBench/{bench}/kubernetes/')
+        run_cmd(f'kubectl apply -f ./bench/{bench}/hr-client.yaml')
+    else:
+        print("Skipping start pods.")
 
     wait_on_pods()
     print("All pods are running.")
@@ -172,12 +174,14 @@ def run_deathstar(bench, autoscaler, autoscaler_config):
     kill_process(autoscaler_process)
     delete_autoscaler(autoscaler)
 
-# TODO move initialization stuff to section with "init" flag
 def main():
     global BENCH_DIR
     parser = argparse.ArgumentParser()
     parser.add_argument('-b', '--benchmark', type=str)
     parser.add_argument('-a', '--autoscaler', type=str, default='KHPA')
+    parser.add_argument('--build', action='store_true', help='If set, will perform init action of building containers')
+    parser.add_argument('--run', action='store_true', help='If set, will perform init action of starting deployments')
+    parser.add_argument('--delete', action='store_true', help='If set, will perform final action of deleting deployments')
     parser.add_argument('-y', '--yaml', type=str,
         default='{\'autoscaler\': \'KHPA\', \'args\': [{\'cpu-percent\': 50}, {\'min\': 1}, {\'max\': 10}]}',
         help="Either a yaml file path OR a string representing the yaml config for the chosen autoscaler")
@@ -186,10 +190,10 @@ def main():
     autoscaler = args.autoscaler
     yaml = args.yaml
 
+    # Create directories for output
     if not os.path.exists(bench_root):
         os.mkdir(bench_root)
 
-    # Create directories for output
     timestamp = time.time()
     dt_object = datetime.utcfromtimestamp(timestamp)
     BENCH_DIR = os.path.join(os.getcwd(), bench_root, dt_object.strftime('%Y-%m-%d_%H-%M-%S'))
@@ -210,7 +214,7 @@ def main():
             > Supported autoscalers: {scalers}')
 
     if bench in supported_deathstar:
-        run_deathstar(bench, autoscaler, yaml) 
+        run_deathstar(bench, autoscaler, yaml, args.build, args.run) 
     elif bench in supported_other:
         print("Other benchmarks not supported yet.") 
     else:
@@ -221,8 +225,9 @@ def main():
             > Supported other benchmarks: {other}')
 
     # Delete all deployments (have option to keep them up normally, this is for testing) (or should they be cold?)
-    run_cmd('kubectl delete deployment --all --namespace=default')
-    run_cmd('kubectl delete pod --all --namespace=default')
+    if args.delete:
+        run_cmd('kubectl delete deployment --all --namespace=default')
+        run_cmd('kubectl delete pod --all --namespace=default')
 
 if __name__ == "__main__":
     main()
