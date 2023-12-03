@@ -144,14 +144,11 @@ def run_deathstar(bench, autoscaler, autoscaler_config):
     run_cmd('make wrk')
 
     # Run build script for microservice containers
-    # TODO Make build script universal, just need to configure Dockerfile paths
     print("Building Docker images...")
     run_cmd(f'./bench/{bench}/build-docker-images.sh')
 
-    # TODO universal paths, need to make DeathStar fork for other benchmarks
-    # Fork from the old branch linked in notes
     print("Starting pods...")
-    run_cmd(f'kubectl apply -Rf ./bench/{bench}/kubernetes/')
+    run_cmd(f'kubectl apply -Rf ./bench/DeathStarBench/{bench}/kubernetes/')
     # Start hr-client
     run_cmd(f'kubectl apply -f ./bench/{bench}/hr-client.yaml')
 
@@ -162,9 +159,8 @@ def run_deathstar(bench, autoscaler, autoscaler_config):
     autoscaler_process = run_autoscaler(autoscaler, autoscaler_config)
     
     # Generate traffic within cluster through hr-client node
-    # TODO make universal
     print("Generating workload...")
-    gen_res = run_cmd('./bench/{bench}/workload_gen.sh')
+    gen_res = run_cmd(f'./bench/{bench}/workload_gen.sh')
     print("Done generating workload.")
 
     # Write workload gen output

@@ -1,7 +1,7 @@
 ## Setup Instructions
 
 ### Installing Dependencies
-- Run `bash ./scripts/setup_dependencies.sh'. This script installs Docker Engine, luarocks, lua-socket, and optionally kubectl, and adds your user to the docker group so you can run docker without being root.
+- Run `bash ./scripts/setup_dependencies.sh`. This script installs Docker Engine, luarocks, lua-socket, and optionally kubectl, and adds your user to the docker group so you can run docker without being root.
 
 ### Docker Setup
 - Login to Docker (docker login)
@@ -25,7 +25,26 @@ minikube start
 envsubst < scripts/minimal/nginx.yaml | kubectl apply -f -
 envsubst < scripts/minimal/controller.yaml | kubectl apply -f -
 ```
-TODO: Might move some of these steps into a bigger Python script to automate running services
 
 ### DeathStar HotelReservation
-- Scripting TODO
+The `run_workload.py` script builds necessary docker images, starts a microservice benchmark and the specified autoscaler, and generated requests. Results are output to `artifacts/latest`. To run:
+
+```
+python3 ./scripts/run_workload.py -b hotelReservation
+```
+
+#### Exposing jaeger ports
+Jaeger lets you visualize microservice traces and a microservice graph. To set it up, run this command on the controller node:
+```
+kubectl expose deployment jaeger --type=NodePort --name <jaeger-service-name>
+```
+Save the NodePort for port 16686 that is output from:
+```
+kubectl describe services <jaeger-service-name>
+```
+Then, on the node that’s running the jaeger pod, ssh into it to exposse the jaeger port
+```
+ssh -L 8080:localhost:<saved-NodePort> <worker-hostname>
+```
+Finally, navigate to localhost:8080 on your local machine (apparently CloudLab machine ports can be exposed to the internet so you can also access it through the CloudLab website).
+

@@ -15,7 +15,7 @@ cd ../
 ROOT_FOLDER=$(pwd)
 # TMP hardcoding path
 # TODO set paths correctly and parameterize application
-ROOT_FOLDER="/users/eyoon/CS395T-proposal/DeathStarBench/hotelReservation"
+ROOT_FOLDER="$USER/CS395T-proposal/bench/DeathStarBench/hotelReservation"
 $EXEC create --name mybuilder --use
 
 for i in hotelreservation
