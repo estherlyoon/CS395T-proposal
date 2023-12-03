@@ -26,11 +26,13 @@ def main():
         - add name label
     how to get right port?
 
+    {'apiVersion': 'apps/v1', 'kind': 'Deployment', 'metadata': {'name': 'nginx', 'labels': {'app': 'nginx'}}, 'spec': {'replicas': 1, 'selector': {'matchLabels': {'app': 'nginx'}}, 'template': {'metadata': {'labels': {'app': 'nginx'}}, 'spec': {'initContainers': [{'name': 'init-iptables', 'image': '${DOCKER_USER}/init-iptables:latest', 'securityContext': {'capabilities': {'add': ['NET_ADMIN']}, 'privileged': True}, 'env': [{'name': 'SERVICE_PORT', 'value': '80'}]}], 'containers': [{'name': 'nginx', 'image': 'nginx', 'ports': [{'containerPort': 80}], 'env': [{'name': 'SERVICE_PORT', 'value': '80'}]}, {'name': 'sidecar', 'image': '${DOCKER_USER}/sidecar:latest', 'ports': [{'containerPort': 8000}]}]}}}}
+
     kind: Deployment
     """
 
     with open(args.yaml, 'r') as f:
-        data = yaml.safe_load(f)
+        data = yaml.safe_load_all(f)
         print(data)
     exit()
 
@@ -44,17 +46,16 @@ def main():
 
     for yaml_file in yaml_paths:
         with open(yaml_file, 'r') as file:
-            data = yaml.safe_load(file)
-            if data['kind'] != 'Deployment':
-                continue
+            all_data = yaml.safe_load_all(file)
+            for data in all_data:
+                if data['kind'] != 'Deployment':
+                    continue
 
-            container_ports = get_field_values_by_key(data, 'containerPort')
+                container_ports = get_field_values_by_key(data, 'containerPort')
 
-            sidecar_field = {}
+                sidecar_field = {}
 
-            data['spec']['']
-
-
+                data['spec']['']
 
 if __name__ == "__main__":
     main()
