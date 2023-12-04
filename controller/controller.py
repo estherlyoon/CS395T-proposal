@@ -73,7 +73,6 @@ def scale_down(queue_length: int) -> bool:
 
 def main():
     config.load_incluster_config()
-    # TODO configure through yaml
     scale_interval = 10
 
     prom = PrometheusConnect(disable_ssl=True)
@@ -105,14 +104,13 @@ def main():
                 service_queues[service_name] = service_queues[service_name] - pod_queues[pod_ip] + queue_length
 
             pod_queues[pod_ip] = queue_length
-            log(f'Pod queue for {pod_ip} has length {queue_length}, added to {service_name}')
+            #log(f'Pod queue for {pod_ip} has length {queue_length}, added to {service_name}')
         
         # Scale replicas per deployment
         for service_name in deployments:
             if service_name not in service_queues:
-                log(f'Error: {service_name} not found in service queue')
                 continue
-            #log(f'CHECK service {service_name}, queue length is {service_queues[service_name]}')
+            log(f'CHECK service {service_name}, queue length is {service_queues[service_name]}')
             if scale_up(service_queues[service_name]):
                 scale_replicas(service_name, 1)
             elif scale_down(service_queues[service_name]):
