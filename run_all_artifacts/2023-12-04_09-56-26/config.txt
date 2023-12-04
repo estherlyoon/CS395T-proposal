@@ -1,0 +1,7 @@
+benchmark:hotelReservation
+autoscaler:NONE
+wrk-dist:norm
+wrk-duration:300
+scale-interval:15s
+baseline:true
+yaml-config:{'autoscaler': 'KHPA', 'args': [{'cpu-percent': 50}, {'min': 1}, {'max': 10}]}

@@ -1,0 +1,27 @@
+./DeathStarBench/hotelReservation/wrk2/scripts/hotel-reservation/mixed-workload_type_1.lua: ...wrk2/scripts/hotel-reservation/mixed-workload_type_1.lua:1: module 'socket' not found:
+	no field package.preload['socket']
+	no file './socket.lua'
+	no file '/usr/local/share/luajit-2.0.3/socket.lua'
+	no file '/usr/local/share/lua/5.1/socket.lua'
+	no file '/usr/local/share/lua/5.1/socket/init.lua'
+	no file './socket.so'
+	no file '/usr/local/lib/lua/5.1/socket.so'
+	no file '/usr/local/lib/lua/5.1/loadall.so'
+./DeathStarBench/hotelReservation/wrk2/scripts/hotel-reservation/mixed-workload_type_1.lua: ...wrk2/scripts/hotel-reservation/mixed-workload_type_1.lua:1: module 'socket' not found:
+	no field package.preload['socket']
+	no file './socket.lua'
+	no file '/usr/local/share/luajit-2.0.3/socket.lua'
+	no file '/usr/local/share/lua/5.1/socket.lua'
+	no file '/usr/local/share/lua/5.1/socket/init.lua'
+	no file './socket.so'
+	no file '/usr/local/lib/lua/5.1/socket.so'
+	no file '/usr/local/lib/lua/5.1/loadall.so'
+./DeathStarBench/hotelReservation/wrk2/scripts/hotel-reservation/mixed-workload_type_1.lua: ...wrk2/scripts/hotel-reservation/mixed-workload_type_1.lua:1: module 'socket' not found:
+	no field package.preload['socket']
+	no file './socket.lua'
+	no file '/usr/local/share/luajit-2.0.3/socket.lua'
+	no file '/usr/local/share/lua/5.1/socket.lua'
+	no file '/usr/local/share/lua/5.1/socket/init.lua'
+	no file './socket.so'
+	no file '/usr/local/lib/lua/5.1/socket.so'
+	no file '/usr/local/lib/lua/5.1/loadall.so'
