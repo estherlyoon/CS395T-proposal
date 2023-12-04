@@ -35,8 +35,14 @@ def get_pod_usage():
         cpu = 0
         mem = 0
         for cont in stats['containers']:
-            cpu += int(cont['usage']['cpu'].split('n')[0])
-            mem += int(cont['usage']['memory'].split('K')[0])
+            cpu_stat = cont['usage']['cpu']
+            if 'u' in cpu_stat:
+                cpu_stat = f'{int(cpu_stat.split('u')[0]) * 1024}n'
+            cpu += int(cpu_stat.split('n')[0])
+            mem_stat = cont['usage']['memory']
+            if 'Mi' in mem_stat:
+                mem_stat = f'{int(mem_stat.split('M')[0]) * 1024}Ki'
+            mem += int(mem_stat.split('K')[0])
         deployments[deployment][0] += cpu
         deployments[deployment][1] += mem
 
@@ -120,6 +126,7 @@ def main():
     if scale_interval is None:
         log('WARNING envvar SCALE_INTERVAL not set, setting to default of 10s')
         scale_interval = 10
+    log(f'INFO Scale interval is {scale_interval} seconds')
 
     prom = PrometheusConnect(disable_ssl=True)
     print("connected to prometheus", file = sys.stderr)

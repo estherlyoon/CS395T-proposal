@@ -31,6 +31,10 @@ sudo apt-get install helm
 sudo apt install -y luarocks
 sudo luarocks install luasocket
 
+# Install python dependencies
+sudo apt install python3-pip
+pip install prometheus-api-client
+
 sudo usermod -aG docker $USER; newgrp docker
 echo '\nVerify rootless docker:'
 docker run hello-world

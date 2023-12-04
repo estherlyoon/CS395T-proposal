@@ -1,3 +1,7 @@
+[submodule "bench/DeathStarBench-fork"]
+	path = bench/DeathStarBench-fork
+	url = https://github.com/estherlyoon/DeathStarBench.git
+
 [submodule "bench/DeathStarBench"]
 	path = bench/DeathStarBench
-	url = https://github.com/estherlyoon/DeathStarBench.git
+	url = git@github.com:delimitrou/DeathStarBench.git
