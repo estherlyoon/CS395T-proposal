@@ -82,6 +82,11 @@ spec:
         image: ${DOCKER_USER}/controller
         ports:
         - containerPort: 80
+        env:
+        - name: DO_CONTROL
+          value: ${DO_CONTROL} # Set to "FALSE" to not run controller
+        - name: SCALE_INTERVAL
+          value: ${SCALE_INTERVAL}
       - name: prometheus
         image: ${DOCKER_USER}/controller-prometheus
         ports:

@@ -13,7 +13,7 @@ chart_names = {'hotelReservation': 'hotelreservation',
         'socialNetwork': 'socialnetwork'}
 supported_other = [] #['minimal']
 
-supported_autoscalers = ['KHPA', 'ERL']
+supported_autoscalers = ['NONE', 'KHPA', 'ERL']
 
 bench_root = 'artifacts/'
 BENCH_DIR = None
@@ -89,6 +89,8 @@ def delete_autoscaler(autoscaler):
         delete_hpa()
     elif autoscaler == 'ERL':
         delete_erl()
+    elif autoscaler == 'NONE':
+        pass
 
 def run_hpa(config):
     global BENCH_DIR
@@ -106,7 +108,8 @@ def run_hpa(config):
     return process
 
 def run_erl(config):
-    # TODO if needed
+    return None # We're running controlle r in main function now
+
     for arg in config['args']:
         continue
 
@@ -124,6 +127,8 @@ def run_autoscaler(autoscaler, yaml_config):
         return run_hpa(config)
     elif autoscaler == 'ERL':
         return run_erl(config)
+    elif autoscaler == 'NONE':
+        return None
 
 """
 #expected config:
@@ -141,7 +146,8 @@ def load_autoscaler_config(config):
     return config
 
 # TODO Expose jaeger?
-def run_deathstar(bench, autoscaler, autoscaler_config, build=False, run=False):
+# baseline=True just means we want to measure the runtimes of a cluster with no sidecars attached
+def run_deathstar(bench, autoscaler, autoscaler_config, distribution, build=False, run=False, baseline=False, scale='10s'):
     global BENCH_DIR
     if build:
         # Run build script for microservice containers
@@ -152,11 +158,24 @@ def run_deathstar(bench, autoscaler, autoscaler_config, build=False, run=False):
         print("Skipping build images.")
 
     if run:
-        print("Starting pods...")
+        print("Starting pods with helm...")
         docker_user = os.environ.get('DOCKER_USER')
         if not docker_user:
             exit('Must set envvar DOCKER_USER to docker username')
-        run_cmd(f'helm install {chart_names[bench]} --set global.dockerUser={docker_user} ./bench/DeathStarBench/{bench}/helm-chart/{chart_names[bench]}')
+
+        deathstar_path = './bench/DeathStarBench' if baseline else './bench/DeathStarBench-fork'
+        helm_install = f'helm install {chart_names[bench]} {deathstar_path}/{bench}/helm-chart/{chart_names[bench]} \\
+                        --set global.dockerUser={docker_user} \\
+                        --set-string global.resources=\"
+                              requests: 
+                                memory: \"64Mi\"
+                                cpu: \"250m\"
+                              limits:
+                                memory: \"128Mi\"
+                                cpu: \"2\"\"'
+        print(helm_install)
+        exit('check that this looks right')
+        run_cmd(helm_install)
         run_cmd(f'kubectl apply -f ./bench/hr-client.yaml')
     else:
         print("Skipping start pods.")
@@ -164,12 +183,18 @@ def run_deathstar(bench, autoscaler, autoscaler_config, build=False, run=False):
     wait_on_pods()
     print("All pods are running.")
 
+    # TODO how to change time interval programmatically with HPA?
+    if not baseline:
+        control = 'TRUE' if autoscaler == 'ERL' else 'FALSE'
+        print(f"Running prometheus with DO_CONTROL={control}, SCALE_INTERVAL={scale}...")
+        run_cmd(f'envsubst < DO_CONTROL={control} SCALE_INTERVAL={scale} ./scripts/minimal/controller.yaml | kubectl apply -f -')
+
     print(f"Enabling {autoscaler} autoscaler...")
     autoscaler_process = run_autoscaler(autoscaler, autoscaler_config)
     
     # Generate traffic within cluster through hr-client node
     print("Generating workload...")
-    gen_res = run_cmd(f'./bench/{bench}/workload_gen.sh')
+    gen_res = run_cmd(f'DIST={distribution} ./bench/{bench}/workload_gen.sh')
     print("Done generating workload.")
 
     # Write workload gen output
@@ -178,7 +203,13 @@ def run_deathstar(bench, autoscaler, autoscaler_config, build=False, run=False):
     with open(os.path.join(BENCH_DIR, 'workload_gen.err'), 'w') as f:
         f.write(gen_res.stderr)
 
-    kill_process(autoscaler_process)
+    # Save the controller's output before killing it
+    # TODO make sure this is right
+    controller_out = os.path.join(BENCH_DIR, 'controller.log')
+    run_cmd(f'kubectl logs deployments/controller > {controller_out}')
+
+    if autoscaler_process:
+        kill_process(autoscaler_process)
     delete_autoscaler(autoscaler)
 
 def get_prometheus_data(start: datetime, end: datetime, step: str):
@@ -197,7 +228,6 @@ def get_prometheus_data(start: datetime, end: datetime, step: str):
     svc_query = "count (inflight_requests) by (app)"
     svc = prom.custom_query_range(svc_query, start, end, step)
 
-
     return ifr, lat, svc
  
 def main():
@@ -205,9 +235,13 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('-b', '--benchmark', type=str)
     parser.add_argument('-a', '--autoscaler', type=str, default='KHPA')
+    parser.add_argument('-d', '--distribution', type=str, default='norm', help='Options for wrk distribution: [norm, exp]')
+    # Only supported for ERL right now
+    parser.add_argument('-s', '--scale-interval', type=str, default='10s', help='Time interval to scale deployments at. Supported: seconds (s) and milliseconds (ms)')
     parser.add_argument('--build', action='store_true', help='If set, will perform init action of building containers')
     parser.add_argument('--run', action='store_true', help='If set, will perform init action of starting deployments')
     parser.add_argument('--delete', action='store_true', help='If set, will perform final action of deleting deployments')
+    parser.add_argument('--baseline', action='store_true', help='If set, will run a workload without any sidecars or Prometheus configured (vanilla DeathStar)')
     parser.add_argument('-y', '--yaml', type=str,
         default='{\'autoscaler\': \'KHPA\', \'args\': [{\'cpu-percent\': 50}, {\'min\': 1}, {\'max\': 10}]}',
         help="Either a yaml file path OR a string representing the yaml config for the chosen autoscaler")
@@ -232,7 +266,8 @@ def main():
     os.symlink(BENCH_DIR, latest_dir)
     with open(os.path.join(BENCH_DIR, 'config.txt'), 'w') as f:
         config = load_autoscaler_config(yaml)
-        f.write(f"benchmark:{args.benchmark}\nautoscaler:{args.autoscaler}\nconfig:{config}")
+        baseline = 'true' if args.baseline else 'false'
+        f.write(f"benchmark:{args.benchmark}\nautoscaler:{args.autoscaler}\nwrk-dist:{args.distribution}\nscale-interval:{args.scale-interval}\nbaseline:{baseline}\nyaml-config:{config}\n")
 
     if autoscaler not in supported_autoscalers:
         scalers = ' '.join(supported_autoscalers)
@@ -240,7 +275,7 @@ def main():
             > Supported autoscalers: {scalers}')
 
     if bench in supported_deathstar:
-        run_deathstar(bench, autoscaler, yaml, args.build, args.run) 
+        run_deathstar(bench, autoscaler, yaml, args.distribution, args.build, args.run, args.baseline, args.scale_interval)
     elif bench in supported_other:
         print("Other benchmarks not supported yet.") 
     else:
@@ -250,19 +285,23 @@ def main():
             > Supported DeathStar benchmarks: {supp} \n \
             > Supported other benchmarks: {other}')
 
-    # TODO: make sure controlller has been running the whole time
     test_len = timedelta(minutes=5) # TODO: set this properly
-    start = dt_object # maybe this should be more? since stuff may take time to start up idk
+    # TODO Return time between controller start and workload gen for start
+    start = dt_object
     end = dt_object + test_len
     step = 0.5
     data = get_prometheus_data(start, end, step)
-    # TODO: save the data to the right place on disk
+    with open(os.path.join(BENCH_DIR, 'prometheus.log'), 'w') as f:
+        f.write(data) # TODO what does data look like
 
-    # Delete all deployments (have option to keep them up normally, this is for testing) (or should they be cold?)
+    # TODO exception handler to do cleanup, also make sure cleanup steps are right w diff options
+
+    # Always delete the controller
+    run_cmd('kubectl delete deployments/controller')
     if args.delete:
         run_cmd('helm uninstall {chart_names[bench]}')
-        run_cmd('kubectl delete deployment --all --namespace=default')
-        run_cmd('kubectl delete pod --all --namespace=default')
+        #run_cmd('kubectl delete deployment --all --namespace=default')
+        #run_cmd('kubectl delete pod --all --namespace=default')
 
 if __name__ == "__main__":
     main()

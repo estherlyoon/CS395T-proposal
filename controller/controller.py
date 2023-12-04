@@ -17,6 +17,33 @@ def log(string):
     dt_object = datetime.utcfromtimestamp(timestamp)
     print(dt_object.strftime('%Y-%m-%d_%H-%M-%S'), string, file=sys.stderr)
 
+def get_node_usage():
+    api = client.CustomObjectsApi()
+    k8s_nodes = api.list_cluster_custom_object("metrics.k8s.io", "v1beta1", "nodes")
+    for stats in k8s_nodes['items']:
+        usage = f"NODE_USAGE Node:{stats['metadata']['name']}, CPU:{stats['usage']['cpu']}, Memory:{stats['usage']['memory']}"
+        log(usage)
+ 
+def get_pod_usage():
+    api = client.CustomObjectsApi()
+    k8s_nodes = api.list_cluster_custom_object("metrics.k8s.io", "v1beta1", "pods")
+    deployments = {}
+    for stats in k8s_nodes['items']:
+        deployment = '-'.join(stats['metadata']['name'].split('-')[:-2])
+        if deployment not in deployments:
+            deployments[deployment] = [0, 0] #[CPU, MEM]
+        cpu = 0
+        mem = 0
+        for cont in stats['containers']:
+            cpu += int(cont['usage']['cpu'].split('n')[0])
+            mem += int(cont['usage']['memory'].split('K')[0])
+        deployments[deployment][0] += cpu
+        deployments[deployment][1] += mem
+
+    for depl, usage in deployments.items():
+        usage = f"DEPLOYMENT_USAGE Deployment:{depl}, CPU:{usage[0]}n, Memory:{usage[1]}Ki"
+        log(usage)
+
 def get_deployments(namespace='default'):
     v1 = client.CoreV1Api()
     pod_list = v1.list_namespaced_pod(namespace)
@@ -32,7 +59,7 @@ def get_ip_deployment_map(namespace='default'):
     ip_to_deployment = {}
     for pod in pod_list.items:
         if pod.status.pod_ip in ip_to_deployment:
-            print("Error: pod IP appears twice from list pod command", file=sys.stderr)
+            print("ERROR pod IP appears twice from list pod command", file=sys.stderr)
         deployment_name = '-'.join(pod.metadata.name.split('-')[:-2])
         ip_to_deployment[pod.status.pod_ip] = deployment_name
     return ip_to_deployment
@@ -55,7 +82,7 @@ def scale_replicas(name: str, scale: int):
     body = {'spec': {'replicas': curr_replicas + scale}}
     try:                                                                        
         scale_resp = api_instance.patch_namespaced_deployment_scale(name, 'default', body)
-        log(f"SCALED deployment:{name},old-replicas:{curr_replicas},new-replicas:{scale_resp.spec.replicas}")
+        log(f"SCALED deployment:{name}, old-replicas:{curr_replicas}, new-replicas:{scale_resp.spec.replicas}")
     except ApiException as e:
         log("Exception when calling AppsV1Api->patch_namespaced_deployment_scale: %s\n" % e)
 
@@ -72,17 +99,33 @@ def scale_down(queue_length: int) -> bool:
     # trying to minimize number of necessary pods/service
     return queue_length < 2
 
+def convert_to_seconds(time_str):
+    try:
+        if 'ms' in time_str:
+            return float(time_str[:-2]) / 1000
+        elif 's' in time_str:
+            return float(time_str[:-1])
+        else:
+            raise ValueError("Invalid time unit. Supported units: 's' (seconds) or 'm' (milliseconds)")
+    except ValueError as e:
+        print(f"Error: {e}")
+    return None
+
 def main():
     if os.environ['DO_CONTROL'] == 'FALSE':
+        log('INFO envvar DO_CONTROL=FALSE, not running controller logic.')
         return
     config.load_incluster_config()
-    scale_interval = 10
+    scale_interval = convert_to_seconds(os.environ['SCALE_INTERVAL'])
+    if scale_interval is None:
+        log('WARNING envvar SCALE_INTERVAL not set, setting to default of 10s')
+        scale_interval = 10
 
     prom = PrometheusConnect(disable_ssl=True)
     print("connected to prometheus", file = sys.stderr)
     print(prom.all_metrics(), file = sys.stderr)
     deployments = get_deployments()
-    log("deployments:")
+    log("INFO deployments:")
     log(deployments)
 
     while True:
@@ -112,6 +155,8 @@ def main():
         # Scale replicas per deployment
         for service_name in deployments:
             if service_name not in service_queues:
+                if 'controller' not in service_name:
+                    log(f'WARNING {service_name} not found in service queues')
                 continue
             log(f'CHECK service {service_name}, queue length is {service_queues[service_name]}')
             if scale_up(service_queues[service_name]):
@@ -119,6 +164,8 @@ def main():
             elif scale_down(service_queues[service_name]):
                 scale_replicas(service_name, -1)
 
+        get_node_usage()
+        get_pod_usage()
         time.sleep(scale_interval)
 
 if __name__ == "__main__":
