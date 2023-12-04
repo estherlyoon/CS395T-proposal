@@ -22,8 +22,11 @@ containers:
 	cd $(SIDECAR_PATH)/init && docker build -t $(DOCKER_USER)/init-iptables -f Dockerfile .
 	cd $(SIDECAR_PATH)/proxy && docker build -t $(DOCKER_USER)/sidecar -f Dockerfile .
 	cd $(CONTROLLER_PATH)/prometheus && docker build -t $(DOCKER_USER)/controller-prometheus -f Dockerfile .
+	cd $(CONTROLLER_PATH) && docker build -t $(DOCKER_USER)/controller -f Dockerfile .
+	docker push $(DOCKER_USER)/controller
 	docker push $(DOCKER_USER)/init-iptables
 	docker push $(DOCKER_USER)/sidecar
+	docker push $(DOCKER_USER)/controller-prometheus
 
 controller:
 	cd $(CONTROLLER_PATH) && docker build -t $(DOCKER_USER)/controller -f Dockerfile .
