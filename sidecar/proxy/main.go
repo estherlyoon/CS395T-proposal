@@ -15,6 +15,7 @@ import (
 
 const (
 	proxyPort = 8000
+	alpha     = 0.15
 )
 
 var servicePort, _ = strconv.Atoi(os.Getenv("SERVICE_PORT"))
@@ -26,12 +27,21 @@ var inflightRequestGauge = prometheus.NewGauge(
 	},
 )
 
+var requestLatencyGauge = prometheus.NewGauge(
+	prometheus.GaugeOpts{
+		Name: "request_latency",
+		Help: "Exponential moving average of request latency at this pod",
+	},
+)
+
+var requestLatencyGaugeValue = 0.
+
 // Create a structure to define the proxy functionality.
 type Proxy struct{}
 
 var promHandler = promhttp.Handler()
 
-func (p *Proxy) forwardRequest(req *http.Request) (*http.Response, time.Duration, error) {
+func (p *Proxy) forwardRequest(req *http.Request) (*http.Response, error) {
 	// Prepare the destination endpoint to forward the request to.
 	proxyUrl := fmt.Sprintf("http://127.0.0.1:%d%s", servicePort, req.RequestURI)
 
@@ -44,10 +54,13 @@ func (p *Proxy) forwardRequest(req *http.Request) (*http.Response, time.Duration
 	inflightRequestGauge.Inc()
 	res, err := httpClient.Do(proxyReq)
 	inflightRequestGauge.Dec()
-	duration := time.Since(start)
+	latency := time.Since(start).Seconds()
+
+	requestLatencyGaugeValue = alpha*requestLatencyGaugeValue + (1.-alpha)*latency
+	requestLatencyGauge.Set(requestLatencyGaugeValue)
 
 	// Return the response, the request duration, and the error.
-	return res, duration, err
+	return res, err
 }
 
 func (p *Proxy) writeResponse(w http.ResponseWriter, res *http.Response) {
@@ -80,7 +93,7 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 		return
 	}
 	// Forward the HTTP request to the destination service.
-	res, _, err := p.forwardRequest(req)
+	res, err := p.forwardRequest(req)
 
 	// Notify the client if there was an error while forwarding the request.
 	if err != nil {
