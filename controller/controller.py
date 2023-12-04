@@ -5,6 +5,7 @@ from prometheus_api_client import PrometheusConnect
 import time, sys
 from datetime import datetime
 from typing import Tuple
+import os
 
 pod_types = {}
 pod_configs = {}
@@ -72,6 +73,8 @@ def scale_down(queue_length: int) -> bool:
     return queue_length < 2
 
 def main():
+    if os.environ['DO_CONTROL'] == 'FALSE':
+        return
     config.load_incluster_config()
     # TODO configure through yaml
     scale_interval = 10

@@ -2,9 +2,10 @@ import argparse
 import subprocess
 import time
 import os
-from datetime import datetime
+from datetime import datetime, timedelta
 import signal
 import yaml
+from prometheus_api_client import PrometheusConnect
 
 supported_deathstar = ['hotelReservation', 'mediaMicroservices', 'socialNetwork']
 chart_names = {'hotelReservation': 'hotelreservation',
@@ -180,6 +181,25 @@ def run_deathstar(bench, autoscaler, autoscaler_config, build=False, run=False):
     kill_process(autoscaler_process)
     delete_autoscaler(autoscaler)
 
+def get_prometheus_data(start: datetime, end: datetime, step: str):
+    run_cmd("kubectl port-forward deployment/controller 9090:9090")
+    prom = PrometheusConnector()
+    
+    # get and save inflight requests
+    ifr_query = "avg (inflight_requests) by (app)"
+    ifr = prom.custom_query_range(ifr_query, start, end, step)
+
+    # get ans save latency
+    lat_query = "avg (request_latency) by (app)"
+    lat = prom.custom_query_range(lat_query, start, end, step)
+
+    # get and save number of services
+    svc_query = "count (inflight_requests) by (app)"
+    svc = prom.custom_query_range(svc_query, start, end, step)
+
+
+    return ifr, lat, svc
+ 
 def main():
     global BENCH_DIR
     parser = argparse.ArgumentParser()
@@ -229,6 +249,14 @@ def main():
         exit(f'Benchmark is not supported.\n \
             > Supported DeathStar benchmarks: {supp} \n \
             > Supported other benchmarks: {other}')
+
+    # TODO: make sure controlller has been running the whole time
+    test_len = timedelta(minutes=5) # TODO: set this properly
+    start = dt_object # maybe this should be more? since stuff may take time to start up idk
+    end = dt_object + test_len
+    step = 0.5
+    data = get_prometheus_data(start, end, step)
+    # TODO: save the data to the right place on disk
 
     # Delete all deployments (have option to keep them up normally, this is for testing) (or should they be cold?)
     if args.delete:
