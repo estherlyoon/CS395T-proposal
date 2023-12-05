@@ -4,4 +4,4 @@
 
 [submodule "bench/DeathStarBench"]
 	path = bench/DeathStarBench
-	url = git@github.com:delimitrou/DeathStarBench.git
+	url = https://github.com/delimitrou/DeathStarBench.git

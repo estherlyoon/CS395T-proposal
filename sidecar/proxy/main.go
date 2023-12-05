@@ -14,8 +14,9 @@ import (
 )
 
 const (
-	proxyPort = 8000
-	alpha     = 0.15
+	proxyPort      = 8000
+	alpha          = 0.15
+	requestTimeout = 10 * time.Second
 )
 
 var servicePort, _ = strconv.Atoi(os.Getenv("SERVICE_PORT"))
@@ -43,11 +44,17 @@ var promHandler = promhttp.Handler()
 
 func (p *Proxy) forwardRequest(req *http.Request) (*http.Response, error) {
 	// Prepare the destination endpoint to forward the request to.
-	proxyUrl := fmt.Sprintf("http://127.0.0.1:%d%s", servicePort, req.RequestURI)
+	fmt.Fprintln(os.Stderr, req.RequestURI)
+	proxyUrl := fmt.Sprintf("http://127.0.0.1:%d%s", servicePort, req.URL.RequestURI())
 
 	// Create an HTTP client and a proxy request based on the original request.
-	httpClient := http.Client{}
-	proxyReq, _ := http.NewRequest(req.Method, proxyUrl, req.Body)
+	httpClient := http.Client{Timeout: requestTimeout}
+	proxyReq, err := http.NewRequest(req.Method, proxyUrl, req.Body)
+
+	if err != nil {
+		fmt.Fprintln(os.Stderr, err.Error())
+		return nil, err
+	}
 
 	// Capture the duration while making a request to the destination service.
 	start := time.Now()
@@ -55,6 +62,8 @@ func (p *Proxy) forwardRequest(req *http.Request) (*http.Response, error) {
 	res, err := httpClient.Do(proxyReq)
 	inflightRequestGauge.Dec()
 	latency := time.Since(start).Seconds()
+
+	fmt.Fprintln(os.Stderr, "request", proxyUrl, "took", latency, "seconds with status", res.StatusCode)
 
 	requestLatencyGaugeValue = alpha*requestLatencyGaugeValue + (1.-alpha)*latency
 	requestLatencyGauge.Set(requestLatencyGaugeValue)
@@ -97,6 +106,7 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 	// Notify the client if there was an error while forwarding the request.
 	if err != nil {
+		fmt.Fprintln(os.Stderr, err.Error())
 		http.Error(w, err.Error(), http.StatusBadGateway)
 		return
 	}
@@ -108,6 +118,8 @@ func (p *Proxy) ServeHTTP(w http.ResponseWriter, req *http.Request) {
 
 func main() {
 	// prometheus.Unregister()
+	prometheus.MustRegister(requestLatencyGauge)
 	prometheus.MustRegister(inflightRequestGauge)
+	inflightRequestGauge.Set(0)
 	http.ListenAndServe(fmt.Sprintf(":%d", proxyPort), &Proxy{})
 }
